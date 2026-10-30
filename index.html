@@ -278,7 +278,39 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .standards p { max-width: 75ch; font-size: .92rem; }
 .standards a { color: var(--accent); }
 
+/* fact entry: digit slots, fuse, bosses */
+.slotform { position: relative; display: flex; justify-content: center; }
+.slots { display: flex; gap: 8px; justify-content: center; align-items: center; cursor: text; }
+.slot { width: 3rem; height: 3.7rem; display: flex; align-items: center; justify-content: center; border: 2px solid var(--line); border-radius: 10px; background: var(--surface-2); font-family: var(--mono); font-size: 2rem; font-weight: 600; transition: border-color .12s, transform .12s; }
+.slot.next { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.slot.filled { border-color: var(--accent); animation: slotpop .16s ease; }
+@keyframes slotpop { 50% { transform: scale(1.12); } }
+.slot-sep { font-family: var(--mono); font-size: 2rem; font-weight: 600; color: var(--muted); }
+.slots.ok .slot { border-color: var(--good); background: var(--good-soft); color: var(--good); }
+.slots.no .slot { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+.slots.no { animation: shake .3s ease; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.slot-input { position: absolute; inset: 0; opacity: 0; font-size: 16px; width: 100%; border: 0; caret-color: transparent; }
+.fuse { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; max-width: 360px; width: 100%; margin: 0 auto; }
+.fuse i { display: block; height: 100%; width: 100%; background: var(--good); animation-name: fuse; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes fuse { 0% { width: 100%; background: var(--good); } 60% { background: var(--hl); } 100% { width: 0%; background: var(--bad); } }
+.again { text-align: center; color: var(--bad); }
+.bosses { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.boss { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface-2); text-align: center; }
+.boss.cur { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.boss .bname { font-family: var(--mono); font-weight: 700; font-size: 1rem; }
+.boss .bcat { font-size: .66rem; color: var(--muted); line-height: 1.2; }
+.boss .hp { display: flex; gap: 3px; }
+.boss .hp i { width: 16px; height: 6px; border-radius: 2px; background: var(--line); }
+.boss .hp i.on { background: var(--bad); }
+.boss.dead { opacity: .45; text-decoration: line-through; }
+.boss.dead .bname::after { content: " ✓"; color: var(--good); }
+.boss.hit { animation: shake .3s ease; }
+.boss.heal { animation: pop .35s ease; }
+@media (prefers-reduced-motion: reduce) { .fuse i { animation: none !important; } }
+
 @media (max-width: 680px) {
+  .slot { width: 2.6rem; height: 3.3rem; font-size: 1.7rem; }
   .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
   .mode-math { grid-template-columns: 1fr; }
@@ -420,6 +452,7 @@ function modeName(m) {
   if (MODES[m]) return MODES[m].name;
   if (m && m.startsWith("m:") && MATH_CATS[m.slice(2)]) return MATH_CATS[m.slice(2)].name + " check";
   if (m === "weak") return "Weak-fact drill";
+  if (m === "boss") return "Boss battle";
   return m;
 }
 const RANKS = [
@@ -920,11 +953,19 @@ function catItem(c, f) {
   const C = MATH_CATS[c]; const g = C.make(f);
   // Tier 1 facts auto-submit once the typed digits match the answer's digit count
   // (percent answers are counted at one decimal place: 1/8 → "12.5", 1/3 → "33.3").
-  const auto = C.tier === 1 ? (String(+g.a.toFixed(1)).match(/\d/g) || []).length : 0;
-  return { skill: "math", type: "num", sprint: true, c, f, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol, abs: g.abs || 0, strict: !!g.strict, tip: g.tip, label: C.name, auto };
+  const pattern = C.tier === 1 ? String(+g.a.toFixed(1)) : "";
+  const auto = (pattern.match(/\d/g) || []).length;
+  return { skill: "math", type: "num", sprint: true, c, f, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol, abs: g.abs || 0, strict: !!g.strict, tip: g.tip, label: C.name, auto, pattern, tms: 60000 / C.cpm };
 }
 
 // Per-fact and per-category statistics from every math item ever answered.
+// Typed digits laid into the answer's shape: "125" against "12.5" → "12.5"
+function slotValue(q, raw) {
+  const d = raw.replace(/\D/g, ""); let i = 0, out = "";
+  for (const ch of q.pattern) { if (/\d/.test(ch)) { if (i < d.length) out += d[i++]; } else if (i < d.length) out += ch; }
+  return out;
+}
+
 function gymStats() {
   const facts = {}, cats = {};
   for (const k of CAT_KEYS) cats[k] = { items: [], checks: [] };
@@ -1186,8 +1227,9 @@ function buildQueue(mode) {
 }
 
 function startSession(mode, opts = {}) {
-  const sprint = mode === "math" ? 90 : mode === "lingo" || mode === "weak" || mode.startsWith("m:") ? 60 : 0;
-  S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [], weak: opts.weak || null, gs: gymStats(), startTs: Date.now() };
+  const sprint = mode === "math" || mode === "boss" ? 90 : mode === "lingo" || mode === "weak" || mode.startsWith("m:") ? 60 : 0;
+  S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [], weak: opts.weak || null, gs: gymStats(), startTs: Date.now(), reask: [],
+    bosses: mode === "boss" ? opts.bosses.map(k => ({ k, hp: 3 })) : null };
   if (sprint) { S.endAt = Date.now() + sprint * 1000; S.queue.push(sprintItem()); }
   renderGame();
   if (sprint) tickTimer();
@@ -1197,6 +1239,13 @@ function startSession(mode, opts = {}) {
 function current() { return S.queue[S.idx]; }
 function sprintItem() {
   const m = S.mode, prev = S.queue[S.queue.length - 1];
+  // A missed fact comes back 2–3 cards later (immediate error correction)
+  if (S.reask.length && S.reask[0].due <= S.queue.length) { const r = S.reask.shift(); return { ...catItem(r.c, r.f), reask: true }; }
+  if (m === "boss") {
+    let alive = S.bosses.filter(b => b.hp > 0);
+    if (alive.length > 1 && prev) alive = alive.filter(b => b.k !== prev.c + "|" + prev.f);
+    const [c, f] = pick(alive).k.split("|"); return catItem(c, f);
+  }
   const gen = () => {
     if (m === "lingo") return lingoItem();
     if (m === "math") return mathItem(null, S.gs);
@@ -1213,7 +1262,7 @@ function record(ok, extra) {
   const full = okv >= .75;
   S.combo = full ? S.combo + 1 : 0;
   S.bestCombo = Math.max(S.bestCombo, S.combo);
-  const target = SKILLS[q.skill].target;
+  const target = q.tms || SKILLS[q.skill].target;
   const gained = Math.round(okv * 10 + (full && ms <= target ? 5 : 0) + (full ? Math.min(S.combo, 10) : 0));
   S.xp += gained;
   const it = { s: q.skill, ok: +okv.toFixed(2), ms };
@@ -1508,7 +1557,8 @@ function renderGym() {
     </section>
 
     <section class="card wrap" style="gap:12px">
-      <div class="section-head"><h2>Weakest facts</h2>${top.length ? `<button class="btn sm primary" type="button" id="weakBtn">Drill these ${top.length} · 60 s</button>` : ""}</div>
+      <div class="section-head"><h2>Weakest facts</h2>${top.length ? `<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm primary" type="button" id="bossBtn">Boss battle · top ${Math.min(5, top.length)}</button><button class="btn sm" type="button" id="weakBtn">Drill all ${top.length} · 60 s</button></span>` : ""}</div>
+      ${top.length ? `<p class="muted small">Boss battle: your ${Math.min(5, top.length)} weakest facts each have 3 HP. A correct answer under the standard time is a hit; a miss heals the boss. Beat all of them inside 90 seconds.</p>` : ""}
       ${weakTable}
     </section>
 
@@ -1530,6 +1580,7 @@ function renderGym() {
     const r = $("#strat-" + b.dataset.strat); r.hidden = !r.hidden; b.setAttribute("aria-expanded", String(!r.hidden)); b.textContent = r.hidden ? "How" : "Hide";
   }));
   if ($("#weakBtn")) $("#weakBtn").addEventListener("click", () => startSession("weak", { weak: top.map(x => x.k + "|" + x.f) }));
+  if ($("#bossBtn")) $("#bossBtn").addEventListener("click", () => startSession("boss", { bosses: top.slice(0, 5).map(x => x.k + "|" + x.f) }));
   scrollTo(0, 0);
 }
 
@@ -1546,7 +1597,7 @@ function renderGame() {
     </div>
     <div class="pips" id="pips" ${S.sprint ? "hidden" : ""}></div>
     <section class="card stage" id="stage"></section>
-    <p class="hint">Keys: <kbd>1</kbd>–<kbd>4</kbd> answer · <kbd>Enter</kbd> submit / next · <kbd>Esc</kbd> quit</p>
+    <p class="hint" id="keyhint"></p>
   </div>`;
   $("#quitBtn").addEventListener("click", () => (S.items.length ? finish() : renderHome()));
   renderQuestion();
@@ -1588,8 +1639,20 @@ function contextBlock(q) {
   return h;
 }
 
+const KEYHINT = {
+  mcq: "Keys: <kbd>1</kbd>–<kbd>4</kbd> pick an option · <kbd>Enter</kbd> next · <kbd>Esc</kbd> quit",
+  auto: "Answers submit as soon as every digit is filled · <kbd>Backspace</kbd> fixes a digit · <kbd>Esc</kbd> quit",
+  num: "<kbd>Enter</kbd> submit · suffixes k / m / b and % work · <kbd>Esc</kbd> quit",
+  tap: "Click words to highlight · <kbd>Enter</kbd> lock in · <kbd>Esc</kbd> quit",
+  text: "<kbd>Ctrl</kbd>+<kbd>Enter</kbd> submit · <kbd>Esc</kbd> quit",
+};
+function bossBar() {
+  const cur = current(), ck = cur.c + "|" + cur.f;
+  return `<div class="bosses">${S.bosses.map(b => { const [c, f] = b.k.split("|"); return `<div class="boss ${b.hp ? "" : "dead"} ${b.k === ck ? "cur" : ""}" data-k="${esc(b.k)}"><span class="bname">${esc(factLabel(f))}</span><span class="hp">${[0, 1, 2].map(i => `<i class="${i < b.hp ? "on" : ""}"></i>`).join("")}</span><span class="bcat">${esc(MATH_CATS[c].name)}</span></div>`; }).join("")}</div>`;
+}
 function renderQuestion() {
   const q = current();
+  $("#keyhint").innerHTML = KEYHINT[q.type === "num" && q.auto ? "auto" : q.type];
   S.answered = false; S.qStart = Date.now();
   renderPips();
   const st = $("#stage");
@@ -1604,18 +1667,31 @@ function renderQuestion() {
       <div id="fbslot"></div>`;
     st.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => answerMCQ(+b.dataset.i)));
   } else if (q.type === "num") {
-    st.innerHTML = `${contextBlock(q)}
-      ${q.label && S.mode !== "m:" + q.c ? `<span class="eyebrow" style="text-align:center">${esc(q.label)}</span>` : ""}
+    const label = q.reask ? `<span class="eyebrow again">Again · you missed this one</span>` : q.label && S.mode !== "m:" + q.c && !S.bosses ? `<span class="eyebrow" style="text-align:center">${esc(q.label)}</span>` : "";
+    const slots = q.auto ? [...q.pattern].map(ch => /\d/.test(ch) ? `<span class="slot"></span>` : `<span class="slot-sep">${ch}</span>`).join("") + (q.unit === "%" ? `<span class="slot-sep">%</span>` : "") : "";
+    st.innerHTML = `${S.bosses ? bossBar() : ""}${contextBlock(q)}
+      ${label}
       <div class="${q.sprint ? "sprint-q" : "qtitle"}">${esc(q.title)}</div>
-      <form class="numrow" id="numForm" autocomplete="off">
-        <input id="numIn" inputmode="${q.auto ? "decimal" : "text"}" placeholder="${q.auto ? (q.unit === "%" ? "auto-submits · 1 decimal" : "auto-submits") : q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m"}" aria-label="Your answer">
+      ${q.tms ? `<div class="fuse" title="Standard: ${(q.tms / 1000).toFixed(1)}s"><i id="fuseBar" style="animation-duration:${q.tms}ms"></i></div>` : ""}
+      ${q.auto ? `<form class="slotform" id="numForm" autocomplete="off"><div class="slots" id="slots">${slots}</div><input id="numIn" class="slot-input" inputmode="decimal" autocomplete="off" aria-label="Your answer, ${q.auto} digits"></form>`
+      : `<form class="numrow" id="numForm" autocomplete="off">
+        <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m"}" aria-label="Your answer">
         <button class="btn primary" type="submit">Submit</button>
-      </form>
-      ${q.sprint ? `<div class="flash" id="flash"></div>` : `<p class="hint">Within ${Math.round(q.tol * 100)}% counts. Suffixes k / m / b work.</p>`}
+      </form>`}
+      ${q.sprint ? `<div class="flash" id="flash"></div>` : `<p class="hint">Within ${Math.round(q.tol * 100)}% counts.${q.auto ? "" : " Suffixes k / m / b work."}</p>`}
       <div id="fbslot"></div>`;
     const inp = $("#numIn"); inp.focus();
-    $("#numForm").addEventListener("submit", e => { e.preventDefault(); answerNum(inp.value); });
-    if (q.auto) inp.addEventListener("input", () => { if ((inp.value.match(/\d/g) || []).length >= q.auto) answerNum(inp.value); });
+    $("#numForm").addEventListener("submit", e => { e.preventDefault(); answerNum(q.auto ? slotValue(q, inp.value) : inp.value); });
+    if (q.auto) {
+      $("#slots").addEventListener("click", () => inp.focus());
+      inp.addEventListener("input", () => {
+        const d = inp.value.replace(/\D/g, "").slice(0, q.auto);
+        if (inp.value !== d) inp.value = d;
+        $("#slots").querySelectorAll(".slot").forEach((el, i) => { el.textContent = d[i] || ""; el.classList.toggle("filled", i < d.length); el.classList.toggle("next", i === d.length); });
+        if (d.length >= q.auto) answerNum(slotValue(q, d));
+      });
+      inp.dispatchEvent(new Event("input"));
+    }
   } else if (q.type === "tap") {
     q.sel = new Set();
     st.innerHTML = `<span class="eyebrow">Case prompt</span>
@@ -1674,6 +1750,7 @@ function answerMCQ(i) {
 
 function answerNum(v) {
   if (S.answered) return;
+  if (!String(v).trim()) return;
   const q = current();
   let x = parseNum(v);
   if (isNaN(x)) { const f = $("#flash") || $("#fbslot"); f.className = f.id === "flash" ? "flash no" : ""; f.innerHTML = `<p class="hint" style="color:var(--bad)">Type a number, like 2.4m or 15%.</p>`; return; }
@@ -1685,11 +1762,26 @@ function answerNum(v) {
   if (!ok && !q.strict && !/[kmbt%]/i.test(v) && Math.abs(target) >= 1e5) ok = [1e3, 1e6, 1e9].some(m => near(x * m));
   const r = record(ok ? 1 : 0);
   const shown = q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
+  const fb = $("#fuseBar"); if (fb) fb.style.animationPlayState = "paused";
+  const sl = $("#slots"); if (sl) sl.classList.add(ok ? "ok" : "no");
+  const fast = q.tms && r.ms <= q.tms;
+  if (!ok && q.c && S.sprint && S.mode !== "boss") S.reask.push({ c: q.c, f: q.f, due: S.queue.length + ri(2, 3) });
+  let bossMsg = "", delay = ok ? (fast ? 420 : 650) : q.tip ? 2600 : 1600;
+  if (S.bosses) {
+    const b = S.bosses.find(x => x.k === q.c + "|" + q.f);
+    if (ok && fast) { b.hp--; bossMsg = b.hp ? "  ·  hit!" : "  ·  boss defeated!"; }
+    else if (ok) bossMsg = `  ·  too slow to land a hit (${(r.ms / 1000).toFixed(1)}s vs ${(q.tms / 1000).toFixed(1)}s)`;
+    else { b.hp = Math.min(3, b.hp + 1); bossMsg = "  ·  boss heals"; }
+    const bar = $("#stage .bosses");
+    if (bar) { bar.outerHTML = bossBar(); const ne = $(`#stage .boss[data-k="${CSS.escape(b.k)}"]`); if (ne) ne.classList.add(ok && fast ? "hit" : ok ? "cur" : "heal"); }
+    if (!b.hp) delay = 900;
+    if (S.bosses.every(x => !x.hp)) S.endAt = Date.now();
+  }
   if (q.sprint) {
     const f = $("#flash"); f.className = "flash " + (ok ? "ok" : "no");
-    f.textContent = ok ? `✓ ${shown}` : `✗ ${shown}${q.tip ? "  ·  " + q.tip : ""}`;
+    f.textContent = (ok ? `✓ ${shown}${fast && !S.bosses ? "  ·  under standard" : ""}` : `✗ ${shown}${q.tip ? "  ·  " + q.tip : ""}`) + bossMsg;
     $("#numIn").disabled = true;
-    const me = S; setTimeout(() => { if (S === me) next(); }, ok ? 420 : q.tip ? 2600 : 1600); return;
+    const me = S; setTimeout(() => { if (S === me) next(); }, delay); return;
   }
   $("#numIn").disabled = true;
   showFeedback(ok ? 1 : 0, `<div>Answer: <b class="num">${shown}</b>. You said <span class="num">${esc(v)}</span>.</div>
@@ -1746,7 +1838,7 @@ async function finish() {
   const before = totals().xp;
   const rec = { id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ts: Date.now(), mode: s.mode, items: s.items, xp: s.xp, bestCombo: s.bestCombo };
   if (s.sprint) rec.dur = Math.round(Math.min(s.sprint, (Date.now() - s.startTs) / 1000));
-  const isMath = s.mode === "math" || s.mode === "weak" || s.mode.startsWith("m:");
+  const isMath = s.mode === "math" || s.mode === "weak" || s.mode === "boss" || s.mode.startsWith("m:");
   const prev = Store.recs.filter(r => r.mode === s.mode).slice(-1)[0];
   Store.add(rec);
   const acc = s.items.reduce((a, b) => a + b.ok, 0) / s.items.length;
@@ -1763,6 +1855,11 @@ async function finish() {
   }).join("");
   const sprintLine = s.sprint ? `<p><b class="num">${correctN}</b> correct in ${rec.dur} seconds${prev ? ` · last time <b class="num">${prev.items.filter(i => i.ok >= .75).length}</b>` : ""}.</p>` : "";
   let mathBlock = "";
+  if (s.bosses) {
+    const dead = s.bosses.filter(b => !b.hp).length;
+    mathBlock += `<div class="std ${dead === s.bosses.length ? "met" : ""}"><b class="num">${dead}/${s.bosses.length}</b> bosses defeated${dead === s.bosses.length ? ` in ${rec.dur} seconds` : ""}. A hit needs a correct answer under the standard time.</div>
+      <div class="bosses">${s.bosses.map(b => { const [c, f] = b.k.split("|"); return `<div class="boss ${b.hp ? "" : "dead"}"><span class="bname">${esc(factLabel(f))}</span><span class="hp">${[0, 1, 2].map(i => `<i class="${i < b.hp ? "on" : ""}"></i>`).join("")}</span><span class="bcat">${esc(MATH_CATS[c].name)}</span></div>`; }).join("")}</div>`;
+  }
   if (isMath) {
     const cpm = correctN / (rec.dur / 60);
     if (s.mode.startsWith("m:")) {
@@ -1797,7 +1894,8 @@ async function finish() {
       </div>
     </section>
   </div>`;
-  $("#againBtn").addEventListener("click", () => startSession(s.mode, { weak: s.weak }));
+  $("#againBtn").addEventListener("click", () => s.bosses ? renderGym() : startSession(s.mode, { weak: s.weak }));
+  if (s.bosses) $("#againBtn").firstChild.textContent = "Pick new bosses ";
   if (isMath) $("#gymBtn2").addEventListener("click", renderGym);
   $("#homeBtn2").addEventListener("click", renderHome);
   $("#againBtn").focus({ preventScroll: true });
