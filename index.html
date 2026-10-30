@@ -1,0 +1,1419 @@
+<title>Case Cracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a steering-committee "deck" turned arcade. Cool graph-paper ground, white slide cards,
+   cobalt for action, highlighter yellow for the things you must not miss. */
+:root {
+  --bg: #eaeef5;
+  --grid: #dde3ee;
+  --surface: #ffffff;
+  --surface-2: #f4f6fb;
+  --ink: #131a2c;
+  --muted: #586379;
+  --line: #d3dae7;
+  --accent: #2b45f0;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3e8ff;
+  --hl: #ffe45c;
+  --hl-ink: #131a2c;
+  --good: #10794a;
+  --good-soft: #def3e8;
+  --bad: #c0352e;
+  --bad-soft: #fbe3e1;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1220; --grid: #151c2f; --surface: #161d30; --surface-2: #1c2439; --ink: #e8ecf6; --muted: #9ba5bc;
+    --line: #2a3352; --accent: #7d8dff; --accent-ink: #0d1220; --accent-soft: #232c55; --hl: #e9c92c; --hl-ink: #131a2c;
+    --good: #4cc48b; --good-soft: #15342a; --bad: #ff7d72; --bad-soft: #3d1d1f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1220; --grid: #151c2f; --surface: #161d30; --surface-2: #1c2439; --ink: #e8ecf6; --muted: #9ba5bc;
+  --line: #2a3352; --accent: #7d8dff; --accent-ink: #0d1220; --accent-soft: #232c55; --hl: #e9c92c; --hl-ink: #131a2c;
+  --good: #4cc48b; --good-soft: #15342a; --bad: #ff7d72; --bad-soft: #3d1d1f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background-color: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 48px;
+}
+.wrap { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.1; }
+h2 { font-size: 1.35rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, .word:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.muted { color: var(--muted); }
+
+/* top bar */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; background: none; border: 0; padding: 0; }
+.brand b { font-family: var(--display); font-weight: 800; font-size: 1.6rem; letter-spacing: -.02em; }
+.brand mark { background: var(--hl); color: var(--hl-ink); padding: 0 .2em; border-radius: 3px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; font-size: .82rem; font-weight: 600; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.on .dot { background: var(--good); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; padding: 10px 16px; font-weight: 700; border: 1px solid var(--line); background: var(--surface); }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn:disabled { opacity: .5; cursor: default; }
+kbd { font-family: var(--mono); font-size: .72rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--muted); background: var(--surface-2); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.hero > * { min-width: 0; }
+.hero.duo { grid-template-columns: 1fr 1fr; }
+.rank-card { display: flex; flex-direction: column; gap: 12px; }
+.rank-title { font-family: var(--display); font-weight: 800; font-size: clamp(1.7rem, 4.6vw, 2.5rem); letter-spacing: -.02em; }
+.xpbar { height: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.xpbar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .6s ease; }
+.stats-row { display: flex; gap: 18px; flex-wrap: wrap; }
+.stat b { display: block; font-family: var(--mono); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .78rem; color: var(--muted); }
+.shift { background: var(--ink); color: var(--bg); border-color: var(--ink); display: flex; flex-direction: column; gap: 10px; }
+.shift .eyebrow { color: color-mix(in srgb, var(--bg) 70%, transparent); }
+.shift h2 { font-size: 1.5rem; }
+.shift p { color: color-mix(in srgb, var(--bg) 82%, transparent); font-size: .92rem; }
+.shift .btn.primary { background: var(--hl); color: var(--hl-ink); border-color: var(--hl); align-self: flex-start; margin-top: auto; }
+
+/* modes */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.mode { text-align: left; display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; transition: transform .12s ease, border-color .12s; }
+.mode:hover { transform: translateY(-2px); border-color: var(--accent); }
+.mode .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tag { font-size: .7rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.hl { background: var(--hl); color: var(--hl-ink); }
+.mode p { font-size: .88rem; color: var(--muted); }
+.mode .meta { font-size: .78rem; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; margin-top: auto; }
+.mode-math { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mode-math > .mode { min-width: 0; }
+
+/* progress */
+.ptable-wrap { overflow-x: auto; }
+.ptable { width: 100%; border-collapse: collapse; font-size: .88rem; min-width: 560px; }
+.ptable th { text-align: left; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.ptable td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.ptable tr:last-child td { border-bottom: 0; }
+.mbar { width: 110px; height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.mbar i { display: block; height: 100%; background: var(--accent); }
+.mbar.done i { background: var(--good); }
+.pill { font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.new { background: var(--surface-2); color: var(--muted); }
+.pill.work { background: var(--bad-soft); color: var(--bad); }
+.pill.prog { background: var(--accent-soft); color: var(--accent); }
+.pill.mast { background: var(--good-soft); color: var(--good); }
+.spark { display: block; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge { border: 1px dashed var(--line); border-radius: 8px; padding: 6px 10px; font-size: .8rem; color: var(--muted); }
+.badge.got { border-style: solid; border-color: var(--hl); background: color-mix(in srgb, var(--hl) 22%, var(--surface)); color: var(--ink); font-weight: 600; }
+.foot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: .8rem; color: var(--muted); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.backup { display: flex; flex-direction: column; gap: 8px; }
+.backup textarea { width: 100%; min-height: 90px; font-family: var(--mono); font-size: .75rem; }
+
+/* game */
+.gamebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.gamebar .left { display: flex; align-items: center; gap: 12px; }
+.pips { display: flex; gap: 4px; flex-wrap: wrap; }
+.pip { width: 18px; height: 6px; border-radius: 3px; background: var(--line); }
+.pip.ok { background: var(--good); }
+.pip.part { background: var(--hl); }
+.pip.no { background: var(--bad); }
+.pip.cur { background: var(--accent); }
+.hud { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.combo { font-family: var(--display); font-weight: 800; color: var(--accent); min-width: 3.5em; text-align: right; }
+.combo.pop { animation: pop .35s ease; }
+@keyframes pop { 50% { transform: scale(1.35); } }
+.timer { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; padding: 3px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+.timer.low { color: var(--bad); border-color: var(--bad); }
+.stage { display: flex; flex-direction: column; gap: 16px; }
+.qtitle { font-family: var(--display); font-weight: 700; font-size: clamp(1.15rem, 3.2vw, 1.45rem); line-height: 1.25; }
+.prompt-text { font-size: 1rem; }
+.exhibit { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.exhibit .cap { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.ex-wrap { overflow-x: auto; }
+.ex { border-collapse: collapse; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .88rem; min-width: 320px; width: 100%; }
+.ex th, .ex td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+.ex th:first-child, .ex td:first-child { text-align: left; font-family: var(--body); }
+.ex th { font-size: .75rem; color: var(--muted); font-weight: 600; }
+.ex tr.total td { font-weight: 700; border-top: 2px solid var(--ink); }
+.opts { display: grid; gap: 8px; }
+.opt { text-align: left; display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt .k { font-family: var(--mono); font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; margin-top: 2px; flex: none; }
+.opt.right { border-color: var(--good); background: var(--good-soft); }
+.opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.opt:disabled { cursor: default; }
+.numrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.numrow input { flex: 1 1 180px; min-width: 0; font-family: var(--mono); font-size: 1.3rem; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+.hint { font-size: .8rem; color: var(--muted); }
+.fb { border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); background: var(--surface-2); }
+.fb.ok { border-color: var(--good); }
+.fb.no { border-color: var(--bad); }
+.fb .verdict { font-family: var(--display); font-weight: 800; font-size: 1.1rem; }
+.fb.ok .verdict { color: var(--good); }
+.fb.no .verdict { color: var(--bad); }
+.fb ul { margin: 0; padding-left: 1.2em; }
+.fb .quip { font-style: italic; color: var(--muted); font-size: .88rem; }
+.nextrow { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+.flash { font-family: var(--display); font-weight: 800; font-size: 1.1rem; min-height: 1.6em; }
+.flash.ok { color: var(--good); }
+.flash.no { color: var(--bad); }
+.sprint-q { font-family: var(--mono); font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 600; text-align: center; padding: 18px 6px; line-height: 1.3; }
+.lingo-q { font-family: var(--display); font-size: clamp(1.25rem, 4vw, 1.6rem); font-weight: 700; text-align: center; padding: 10px 4px; }
+
+/* sniper */
+.snipe { font-size: 1.12rem; line-height: 2.05; }
+.word { display: inline; padding: 2px 3px; border-radius: 3px; cursor: pointer; border: 0; background: none; font: inherit; color: inherit; }
+.word:hover { background: var(--accent-soft); }
+.word.on { background: var(--hl); color: var(--hl-ink); }
+.word.miss { box-shadow: inset 0 -3px 0 var(--bad); }
+.word.fp { text-decoration: line-through; text-decoration-color: var(--bad); }
+.word.hit { background: var(--hl); color: var(--hl-ink); box-shadow: inset 0 -3px 0 var(--good); }
+.why { display: grid; gap: 6px; }
+.why div { display: grid; grid-template-columns: minmax(90px, auto) 1fr; gap: 10px; font-size: .9rem; }
+.why b { background: var(--hl); color: var(--hl-ink); padding: 0 6px; border-radius: 3px; align-self: start; font-weight: 600; }
+
+/* close */
+.facts { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1rem; padding: 12px 14px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
+.meter { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--muted); }
+.meter b { font-family: var(--mono); color: var(--ink); }
+.meter .over { color: var(--bad); }
+.rubric { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.rubric li { display: flex; gap: 8px; align-items: baseline; font-size: .9rem; }
+.rubric .m { font-family: var(--mono); font-weight: 700; flex: none; width: 1.2em; }
+.rubric .y { color: var(--good); }
+.rubric .n { color: var(--bad); }
+.model { border-left: 3px solid var(--accent); padding-left: 12px; }
+
+/* bridge chart */
+.bridge { display: grid; gap: 6px; }
+.brow { display: grid; grid-template-columns: 120px 1fr 74px; gap: 8px; align-items: center; font-size: .82rem; }
+.btrack { position: relative; height: 16px; }
+.btrack::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+.bbar { position: absolute; top: 2px; height: 12px; border-radius: 3px; }
+.bbar.neg { background: var(--bad); }
+.bbar.pos { background: var(--good); }
+.brow .v { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* results */
+.results { display: flex; flex-direction: column; gap: 16px; }
+.big { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.big > div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.big b { display: block; font-family: var(--mono); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.big span { font-size: .75rem; color: var(--muted); }
+.delta-up { color: var(--good); font-weight: 700; }
+.delta-dn { color: var(--bad); font-weight: 700; }
+.rankup { background: var(--hl); color: var(--hl-ink); border-radius: 8px; padding: 12px 14px; font-family: var(--display); font-weight: 800; font-size: 1.15rem; }
+.review { display: grid; gap: 6px; font-size: .88rem; }
+.review div { display: flex; gap: 8px; }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+@media (max-width: 680px) {
+  .hero, .hero.duo { grid-template-columns: 1fr; }
+  .mode-math { grid-template-columns: 1fr; }
+  .big { grid-template-columns: repeat(2, 1fr); }
+  .brow { grid-template-columns: 92px 1fr 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <button class="brand" id="homeBtn" type="button" aria-label="Back to home"><b>Case <mark>Cracker</mark></b></button>
+    <div class="chips">
+      <span class="chip" id="streakChip">🔥 0-day streak</span>
+      <span class="chip" id="syncChip"><span class="dot"></span><span>Saved on this device</span></span>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+<canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+<script>
+"use strict";
+/* ============================================================
+   Utilities
+   ============================================================ */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const rnd = (a, b) => a + Math.random() * (b - a);
+const ri = (a, b) => Math.floor(rnd(a, b + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const roundTo = (x, step) => Math.round(x / step) * step;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
+
+function fmtNum(x) {
+  const a = Math.abs(x), s = x < 0 ? "−" : "";
+  const trim = v => (+v.toPrecision(3)).toString();
+  if (a >= 1e12) return s + trim(a / 1e12) + "T";
+  if (a >= 1e9) return s + trim(a / 1e9) + "B";
+  if (a >= 1e6) return s + trim(a / 1e6) + "M";
+  if (a >= 1e4) return s + trim(a / 1e3) + "K";
+  if (a >= 100) return s + Math.round(a).toLocaleString("en-US");
+  return s + (+a.toPrecision(3)).toString();
+}
+const money = x => (x < 0 ? "−$" : "$") + fmtNum(Math.abs(x));
+const mUSD = (x, d = 1) => (x < 0 ? "−$" : "$") + Math.abs(x).toFixed(d) + "M";
+
+// "2.4m", "$1,200", "12%", "3.5b", "840k", "1.2 bn"
+function parseNum(str) {
+  if (str == null) return NaN;
+  let s = String(str).trim().toLowerCase().replace(/[$,\s]/g, "").replace(/−/g, "-");
+  if (!s) return NaN;
+  let mult = 1;
+  const m = s.match(/(trillion|billion|million|thousand|bn|mm|tn|t|b|m|k|%|x|yrs?|years?)$/);
+  if (m) {
+    const u = m[1];
+    mult = { t: 1e12, tn: 1e12, trillion: 1e12, b: 1e9, bn: 1e9, billion: 1e9, m: 1e6, mm: 1e6, million: 1e6, k: 1e3, thousand: 1e3 }[u] || 1;
+    s = s.slice(0, -u.length);
+  }
+  const v = parseFloat(s);
+  return isNaN(v) ? NaN : v * mult;
+}
+
+/* ============================================================
+   Storage: records live in the artifact database when available,
+   with a localStorage mirror so the game also works offline.
+   ============================================================ */
+const LS_KEY = "caseCracker.v1";
+const Store = {
+  recs: [], col: null,
+  load() {
+    try { const r = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); this.recs = Array.isArray(r) ? r : []; } catch (e) { this.recs = []; }
+  },
+  saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(this.recs)); } catch (e) {} },
+  async connect() {
+    try {
+      if (!window.claude || typeof window.claude.use !== "function") return;
+      const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      if (!db || !user) return;
+      const id = await user.id();
+      if (!id) return;
+      this.col = db.collection("data/users/" + id);
+      const snap = await this.col.get();
+      const remote = snap.docs.map(d => d.data()).filter(r => r && r.id && r.ts);
+      const ids = new Set(remote.map(r => r.id));
+      const localOnly = this.recs.filter(r => !ids.has(r.id));
+      this.recs = remote.concat(localOnly).sort((a, b) => a.ts - b.ts);
+      this.saveLocal();
+      setSync(true);
+      for (const r of localOnly) { try { await this.col.doc(r.id).set(r); } catch (e) {} }
+      if (screen === "home") renderHome();
+    } catch (e) { /* stay local */ }
+  },
+  async add(r) {
+    this.recs.push(r); this.saveLocal();
+    if (this.col) { try { await this.col.doc(r.id).set(r); } catch (e) {} }
+  },
+  async importAll(list) {
+    const ids = new Set(this.recs.map(r => r.id));
+    const fresh = list.filter(r => r && r.id && r.ts && r.mode && Array.isArray(r.items) && !ids.has(r.id));
+    for (const r of fresh) await this.add(r);
+    this.recs.sort((a, b) => a.ts - b.ts); this.saveLocal();
+    return fresh.length;
+  }
+};
+function setSync(on) {
+  const c = $("#syncChip"); c.classList.toggle("on", on);
+  c.lastElementChild.textContent = on ? "Synced to your account" : "Saved on this device";
+}
+
+/* ============================================================
+   Skills, modes, ranks
+   ============================================================ */
+const SKILLS = {
+  metric:  { name: "Quant-first diagnosis", short: "Quant-first", target: 25000 },
+  sniper:  { name: "Prompt constraints", short: "Constraints", target: 35000 },
+  close:   { name: "Three-sentence close", short: "Close", target: 60000 },
+  bucket:  { name: "Sub-bucket specificity", short: "Specificity", target: 18000 },
+  lingo:   { name: "Industry vocabulary", short: "Vocab", target: 6000 },
+  math:    { name: "Mental math", short: "Math", target: 12000 },
+  problem: { name: "Case problem solving", short: "Problems", target: 90000 },
+};
+const MODES = {
+  metric:  { name: "Metric Hunt", skill: "metric", tag: "Gap 1", blurb: "A P&L exhibit drops. Find which line moved, by how much, then say it first.", len: "3 exhibits · ~4 min" },
+  sniper:  { name: "Prompt Sniper", skill: "sniper", tag: "Gap 2", blurb: "Highlight every descriptor that should bend your framework. European. Regional. Fintech.", len: "3 prompts · ~4 min" },
+  close:   { name: "Three-Sentence Close", skill: "close", tag: "Gap 3", blurb: "Answer, two reasons with numbers, risk and next step. Sentence four gets you fined.", len: "4 rounds · ~5 min" },
+  bucket:  { name: "Bucket Sharpener", skill: "bucket", tag: "Gap 4", blurb: "Trade \"competition increased\" for \"NIM compression from fintech deposit rates.\"", len: "8 calls · ~3 min" },
+  lingo:   { name: "Lingo Lightning", skill: "lingo", tag: "Vocab", blurb: "60 seconds of terms and definitions. NIM, CAC, RevPAR, take rate.", len: "60 s sprint" },
+  math:    { name: "Math Sprint", skill: "math", tag: "Math", blurb: "90 seconds of percentages, big-number multiplication, breakevens and growth.", len: "90 s sprint" },
+  problem: { name: "Problem Solving", skill: "problem", tag: "Math", blurb: "Multi-step case math: market sizing, payback, LTV, margin targets, NII.", len: "4 problems · ~6 min" },
+  daily:   { name: "Daily Shift", skill: null, tag: "Mixed", blurb: "", len: "~12 items · ~7 min" },
+};
+const RANKS = [
+  [0, "Summer Intern"], [300, "Business Analyst"], [900, "Senior BA"], [1800, "Associate"],
+  [3200, "Engagement Manager"], [5200, "Associate Partner"], [8000, "Partner"], [12000, "Senior Partner"], [18000, "Managing Partner"]
+];
+function rankFor(xp) {
+  let i = 0; while (i + 1 < RANKS.length && xp >= RANKS[i + 1][0]) i++;
+  const cur = RANKS[i], nxt = RANKS[i + 1];
+  return { i, name: cur[1], floor: cur[0], next: nxt ? nxt[0] : null, nextName: nxt ? nxt[1] : null };
+}
+const QUIPS = {
+  great: ["The partner just forwarded your deck to the client unedited.", "Your EM wants you staffed on every case. Forever.", "Somewhere, a Bain recruiter felt a disturbance.", "That was cleaner than a 2x2 matrix.", "Offer letter energy."],
+  good: ["Solid. The EM only left four comments on your slide.", "Billable, defensible, mostly synergistic.", "Respectable. Grab a cold brew and go again.", "The client nodded. Twice."],
+  meh: ["Your EM is drafting a gentle Slack message.", "The partner said \"interesting\" in that tone.", "Recoverable. Most first drafts are.", "We've all mixed up revenue and profit at 11pm."],
+  bad: ["The team room has gone very quiet.", "Let's call that a hypothesis we disproved.", "Even the PowerPoint crashed in sympathy.", "Good news: the only way is up."]
+};
+
+/* ============================================================
+   CONTENT: Metric Hunt (procedural)
+   ============================================================ */
+const INDUSTRIES = [
+  { co: "Ridgeline Roasters", what: "a specialty coffee roaster", unit: "bags", P: [14, 22], rev: [60, 180], vr: [.5, .62] },
+  { co: "Aerlinn", what: "a European regional airline", unit: "seats sold", P: [95, 170], rev: [300, 900], vr: [.55, .68] },
+  { co: "Stackwise", what: "a mid-market SaaS company", unit: "seat licenses", P: [320, 620], rev: [80, 260], vr: [.18, .3] },
+  { co: "Pulse Fitness", what: "a US fitness chain", unit: "memberships", P: [420, 720], rev: [120, 400], vr: [.35, .5] },
+  { co: "Halcyon Audio", what: "a consumer electronics maker", unit: "headphones", P: [90, 220], rev: [150, 600], vr: [.55, .66] },
+  { co: "Torrent Industrial", what: "an industrial pump manufacturer", unit: "pumps", P: [2200, 5200], rev: [100, 350], vr: [.52, .64] },
+  { co: "Greenleaf Grocers", what: "a regional grocery chain", unit: "baskets", P: [38, 62], rev: [500, 1400], vr: [.7, .78] },
+  { co: "Northgate Hotels", what: "a US midscale hotel group", unit: "room-nights", P: [110, 190], rev: [200, 700], vr: [.32, .45] },
+];
+const DRIVERS = {
+  volume: { label: "Volume (units sold)", phrase: "lower volume", dig: "check whether the volume loss is concentrated in one segment, channel, or region" },
+  price: { label: "Average price", phrase: "lower average price", dig: "split the price drop into list-price cuts, discounting, and mix shift" },
+  varcost: { label: "Variable cost per unit", phrase: "higher variable cost per unit", dig: "break unit cost into materials, labor, and logistics to see which component moved" },
+  fixed: { label: "Fixed costs", phrase: "higher fixed costs", dig: "see which fixed line (SG&A, rent, D&A) grew and whether it was a one-off" },
+};
+
+function genPQVF() {
+  for (let tries = 0; tries < 60; tries++) {
+    const ind = pick(INDUSTRIES);
+    const main = pick(Object.keys(DRIVERS));
+    const P1 = roundTo(rnd(ind.P[0], ind.P[1]), ind.P[0] > 1000 ? 50 : ind.P[0] > 80 ? 5 : 0.5);
+    const rev1 = rnd(ind.rev[0], ind.rev[1]);
+    const Q1 = roundTo(rev1 * 1000 / P1, 10);                 // thousands of units
+    const V1 = roundTo(P1 * rnd(ind.vr[0], ind.vr[1]), P1 > 1000 ? 10 : P1 > 80 ? 1 : 0.1);
+    const contrib1 = Q1 * (P1 - V1) / 1000;
+    const F1 = roundTo(contrib1 * rnd(.55, .72), 0.5);
+    const noise = () => 1 + rnd(-.02, .02);
+    let Q2 = Q1 * noise(), P2 = P1 * noise(), V2 = V1 * noise(), F2 = F1 * noise();
+    if (main === "volume") Q2 = Q1 * (1 - rnd(.12, .24));
+    if (main === "price") P2 = P1 * (1 - rnd(.06, .12));
+    if (main === "varcost") V2 = V1 * (1 + rnd(.1, .2));
+    if (main === "fixed") F2 = F1 * (1 + rnd(.18, .35));
+    Q2 = roundTo(Q2, 10); P2 = roundTo(P2, P1 > 1000 ? 50 : P1 > 80 ? 1 : 0.1); V2 = roundTo(V2, P1 > 1000 ? 10 : P1 > 80 ? 1 : 0.1); F2 = roundTo(F2, 0.5);
+    const pr1 = contrib1 - F1, pr2 = Q2 * (P2 - V2) / 1000 - F2;
+    const eff = {
+      price: Q2 * (P2 - P1) / 1000,
+      volume: (Q2 - Q1) * (P1 - V1) / 1000,
+      varcost: -Q2 * (V2 - V1) / 1000,
+      fixed: -(F2 - F1),
+    };
+    const others = Object.keys(eff).filter(k => k !== main);
+    const ok = eff[main] < 0 && others.every(k => Math.abs(eff[k]) * 2.5 < Math.abs(eff[main])) && pr2 < pr1 * .92 && pr1 > 2;
+    if (!ok) continue;
+    return { ind, main, P1, P2, Q1, Q2, V1, V2, F1, F2, pr1, pr2, eff, rev1: Q1 * P1 / 1000, rev2: Q2 * P2 / 1000 };
+  }
+  return genPQVF();
+}
+
+function bridgeHTML(eff, labels, total) {
+  const max = Math.max(...Object.values(eff).map(Math.abs), 0.1);
+  const rows = Object.keys(eff).map(k => {
+    const v = eff[k], w = Math.abs(v) / max * 50;
+    const style = v < 0 ? `right:50%;width:${w}%` : `left:50%;width:${w}%`;
+    return `<div class="brow"><span>${esc(labels[k])}</span><div class="btrack"><span class="bbar ${v < 0 ? "neg" : "pos"}" style="${style}" title="${esc(labels[k])}: ${mUSD(v)}"></span></div><span class="v">${v >= 0 ? "+" : ""}${mUSD(v)}</span></div>`;
+  }).join("");
+  return `<div class="bridge" role="table" aria-label="Profit bridge">${rows}<div class="brow"><b>Total change</b><span></span><b class="v">${mUSD(total)}</b></div></div>`;
+}
+
+function pqvfDecimals(x) { return x >= 1000 ? 0 : x >= 80 ? 0 : 2; }
+function metricRoundPQVF() {
+  const g = genPQVF();
+  const { ind, main } = g;
+  const d = pqvfDecimals(g.P1);
+  const exhibit = `<div class="exhibit"><span class="cap">Exhibit · ${esc(g.ind.co)}, ${esc(g.ind.what)}</span>
+    <div class="ex-wrap"><table class="ex"><thead><tr><th></th><th>FY2024</th><th>FY2025</th></tr></thead><tbody>
+    <tr><td>Units (${esc(ind.unit)}, K)</td><td>${g.Q1.toLocaleString("en-US")}</td><td>${g.Q2.toLocaleString("en-US")}</td></tr>
+    <tr><td>Avg price per unit</td><td>$${g.P1.toFixed(d)}</td><td>$${g.P2.toFixed(d)}</td></tr>
+    <tr><td>Variable cost per unit</td><td>$${g.V1.toFixed(d)}</td><td>$${g.V2.toFixed(d)}</td></tr>
+    <tr><td>Fixed costs</td><td>${mUSD(g.F1)}</td><td>${mUSD(g.F2)}</td></tr>
+    <tr class="total"><td>Operating profit</td><td>${mUSD(g.pr1)}</td><td>${mUSD(g.pr2)}</td></tr>
+    </tbody></table></div></div>`;
+  const dP = g.pr2 - g.pr1, dPct = dP / g.pr1;
+  const labels = { volume: "Volume", price: "Price", varcost: "Var. cost/unit", fixed: "Fixed costs" };
+  const bridge = bridgeHTML(g.eff, labels, dP);
+  const share = g.eff[main] / dP;
+
+  const keys = shuffle(Object.keys(DRIVERS));
+  const q1 = {
+    skill: "metric", type: "mcq", exhibit,
+    title: `Operating profit fell from ${mUSD(g.pr1)} to ${mUSD(g.pr2)}. Which line explains most of the drop?`,
+    options: keys.map(k => DRIVERS[k].label), answer: keys.indexOf(main),
+    explain: `Isolate each driver while holding the others constant. ${DRIVERS[main].label} accounts for ${mUSD(g.eff[main])} of the ${mUSD(dP)} change (${pct(share)}).${bridge}`
+  };
+
+  const correct = g.eff[main];
+  let trap;
+  if (main === "volume") trap = (g.Q2 - g.Q1) * g.P1 / 1000;           // revenue, not contribution
+  else if (main === "price") trap = (g.P2 - g.P1) * g.Q1 / 1000 * 0.5;
+  else if (main === "varcost") trap = -(g.V2 - g.V1) * g.Q1 / 1000 * 1.9;
+  else trap = -(g.F2 - g.F1) * 2;
+  const cand = [correct, trap, correct * .45, correct * 1.7];
+  const seen = new Set(); const mopts = [];
+  for (const c of cand) { const s = mUSD(c); if (!seen.has(s)) { seen.add(s); mopts.push({ s, ok: c === correct }); } }
+  while (mopts.length < 4) { const s = mUSD(correct * rnd(2, 2.6)); if (!seen.has(s)) { seen.add(s); mopts.push({ s, ok: false }); } }
+  const ms = shuffle(mopts);
+  const howCalc = {
+    volume: `ΔUnits × prior unit contribution = (${g.Q2.toLocaleString()}K − ${g.Q1.toLocaleString()}K) × ($${g.P1.toFixed(d)} − $${g.V1.toFixed(d)}) ≈ ${mUSD(correct)}. Multiplying by price instead gives the revenue loss (${mUSD(trap)}), not the profit loss.`,
+    price: `ΔPrice × current units = ($${g.P2.toFixed(d)} − $${g.P1.toFixed(d)}) × ${g.Q2.toLocaleString()}K ≈ ${mUSD(correct)}. Every dollar of price falls straight to profit.`,
+    varcost: `−ΔUnit cost × current units = −($${g.V2.toFixed(d)} − $${g.V1.toFixed(d)}) × ${g.Q2.toLocaleString()}K ≈ ${mUSD(correct)}.`,
+    fixed: `Fixed costs rose from ${mUSD(g.F1)} to ${mUSD(g.F2)}, a ${mUSD(correct)} hit to profit, one for one.`,
+  }[main];
+  const q2 = {
+    skill: "metric", type: "mcq", exhibit,
+    title: `Quantify it. What is the profit impact of the ${DRIVERS[main].label.toLowerCase()} change?`,
+    options: ms.map(o => o.s), answer: ms.findIndex(o => o.ok), explain: howCalc
+  };
+
+  const wrong = pick(Object.keys(DRIVERS).filter(k => k !== main));
+  const lines = [
+    { ok: true, t: `"Profit is down ${mUSD(-dP)}, about ${pct(-dPct)}, and roughly ${Math.round(share * 10) * 10}% of that comes from ${DRIVERS[main].phrase}. Before asking why, I'd ${DRIVERS[main].dig}."` },
+    { ok: false, t: `"My hypothesis is that new competitors are taking customers, so I'd start by mapping the competitive landscape and their value propositions."` },
+    { ok: false, t: `"I'd structure this into revenue, costs, market, and competition, and work through each bucket in turn."` },
+    { ok: false, t: `"Profit is down ${mUSD(-dP)}, mostly because of ${DRIVERS[wrong].phrase}, so I'd dig into what's driving that first."` },
+  ];
+  const ls = shuffle(lines);
+  const q3 = {
+    skill: "metric", type: "mcq", exhibit,
+    title: `Interviewer: "So, what's going on here?" Pick your opening line.`,
+    options: ls.map(l => l.t), answer: ls.findIndex(l => l.ok),
+    explain: `The winning line states the size of the problem, attributes it to one driver with a share, and only then moves to "why." Jumping to competitors or reciting buckets skips the number the interviewer is waiting for.`
+  };
+  return [q1, q2, q3];
+}
+
+const SEG_SETS = [
+  { co: "Brightwave Telecom", what: "a broadband provider", dim: "Region", segs: ["Northeast", "Southeast", "Midwest", "West"], line: "Revenue" },
+  { co: "Kestrel Foods", what: "a packaged snacks company", dim: "Channel", segs: ["Grocery", "Club stores", "Convenience", "E-commerce"], line: "Revenue" },
+  { co: "Meridian Bank", what: "a US regional bank", dim: "Product", segs: ["Mortgages", "Commercial loans", "Credit cards", "Auto loans"], line: "Net interest income" },
+  { co: "Atlas Apparel", what: "a European apparel retailer", dim: "Country", segs: ["Germany", "France", "UK", "Nordics"], line: "Revenue" },
+  { co: "Clearpath Health", what: "a specialty pharma company", dim: "Product", segs: ["Oncology", "Immunology", "Cardio", "Generics"], line: "Revenue" },
+];
+const SEG_DIG = {
+  "Region": "split it into subscribers versus revenue per subscriber in that region",
+  "Channel": "split that channel into store count, traffic, and basket size",
+  "Product": "split it into balances or volume versus yield or price",
+  "Country": "split it into store traffic, conversion, and average ticket",
+};
+function metricRoundMix() {
+  for (let t = 0; t < 50; t++) {
+    const s = pick(SEG_SETS);
+    const base = s.segs.map(() => roundTo(rnd(40, 220), 1));
+    const hit = ri(0, 3);
+    const nxt = base.map((b, i) => roundTo(i === hit ? b * (1 - rnd(.22, .4)) : b * (1 + rnd(-.04, .05)), 1));
+    const d = nxt.map((n, i) => n - base[i]);
+    const tot1 = base.reduce((a, b) => a + b, 0), tot2 = nxt.reduce((a, b) => a + b, 0), dT = tot2 - tot1;
+    if (!(dT < -tot1 * .05) || d.some((x, i) => i !== hit && Math.abs(x) * 2.5 > Math.abs(d[hit]))) continue;
+    const exhibit = `<div class="exhibit"><span class="cap">Exhibit · ${esc(s.co)}, ${esc(s.what)} · ${esc(s.line)} by ${esc(s.dim.toLowerCase())} ($M)</span>
+      <div class="ex-wrap"><table class="ex"><thead><tr><th>${esc(s.dim)}</th><th>FY2024</th><th>FY2025</th></tr></thead><tbody>
+      ${s.segs.map((sg, i) => `<tr><td>${esc(sg)}</td><td>${base[i].toFixed(0)}</td><td>${nxt[i].toFixed(0)}</td></tr>`).join("")}
+      <tr class="total"><td>Total</td><td>${tot1.toFixed(0)}</td><td>${tot2.toFixed(0)}</td></tr></tbody></table></div></div>`;
+    const share = d[hit] / dT;
+    const order = shuffle([0, 1, 2, 3]);
+    const q1 = {
+      skill: "metric", type: "mcq", exhibit,
+      title: `${s.line} fell ${pct(-dT / tot1)}. Which ${s.dim.toLowerCase()} drives it?`,
+      options: order.map(i => s.segs[i]), answer: order.indexOf(hit),
+      explain: `${s.segs[hit]} went from $${base[hit]}M to $${nxt[hit]}M (${mUSD(d[hit], 0)}), against a total change of ${mUSD(dT, 0)}. Scan the deltas, not the levels: the biggest segment is not always the one that moved.`
+    };
+    const corr = Math.round(share * 100);
+    const choices = shuffle([...new Set([corr, Math.round(-d[hit] / tot1 * 100), Math.round(corr * .6), Math.min(99, Math.round(corr * 1.3) + 3)])].slice(0, 4));
+    while (choices.length < 4) choices.push(corr + 7 * choices.length);
+    const q2 = {
+      skill: "metric", type: "mcq", exhibit,
+      title: `What share of the total ${mUSD(dT, 0)} decline does ${s.segs[hit]} explain?`,
+      options: choices.map(c => c + "%"), answer: choices.indexOf(corr),
+      explain: `${mUSD(d[hit], 0)} ÷ ${mUSD(dT, 0)} ≈ ${corr}%. It can exceed 100% when other segments grew. A common slip is dividing by total revenue (${Math.round(-d[hit] / tot1 * 100)}%), which answers a different question.`
+    };
+    const lines = shuffle([
+      { ok: true, t: `"${s.line} is down ${mUSD(-dT, 0)}, about ${pct(-dT / tot1)}, and ${s.segs[hit]} explains roughly ${corr}% of it. I'd ${SEG_DIG[s.dim]} before forming a hypothesis."` },
+      { ok: false, t: `"It sounds like a market-wide slowdown. I'd look at macro trends and customer sentiment first."` },
+      { ok: false, t: `"${s.segs[hit]} is clearly the problem, probably because of a new competitor. Can we talk about their strategy?"` },
+      { ok: false, t: `"I'd like to understand the company's history, products, and customers before looking at the numbers."` },
+    ]);
+    const q3 = {
+      skill: "metric", type: "mcq", exhibit,
+      title: `Pick your next sentence to the interviewer.`, options: lines.map(l => l.t), answer: lines.findIndex(l => l.ok),
+      explain: `Size it, locate it, decompose it, and only then hypothesize. The third option names the right segment but jumps to a cause with no number behind it.`
+    };
+    return [q1, q2, q3];
+  }
+  return metricRoundPQVF();
+}
+const metricRound = () => (Math.random() < .62 ? metricRoundPQVF() : metricRoundMix());
+
+/* ============================================================
+   CONTENT: Prompt Sniper
+   [[phrase|why]] marks a constraint
+   ============================================================ */
+const PROMPTS = [
+  { t: "Your client is a [[mid-sized|Scale limits: can't outspend national players on tech or marketing]] [[European|ECB rate environment, PSD2/open banking, EU capital rules]] [[regional|Local deposit base and branch network; geographic concentration risk]] bank whose [[net interest income|Revenue lens is NII: split into NIM versus balance volume]] fell 15% in two years while [[digital-only competitors|Deposit-rate competition from neobanks; switching costs are low]] grew deposits. Should it launch a mobile-first brand?",
+    q: { title: "Which framework branch does \"regional\" force you to add?", options: ["Local deposit concentration and branch-cost leverage versus national players", "Global expansion options into Asia", "A generic market-size estimate for banking", "Brand awareness among Gen Z worldwide"], answer: 0, explain: "A regional bank's moat and its exposure are both local: deposit concentration, branch density, and community relationships. Global or generic branches ignore the prompt." } },
+  { t: "A [[Series B|Cash runway and burn multiple matter more than near-term profit]] [[fintech startup|Regulatory licensing, bank-partner dependency, interchange economics]] offering [[earned-wage access|Revenue tied to employer adoption and per-transaction fees; regulatory scrutiny]] to [[US hourly workers|Target segment: high churn, low balances, employer-mediated distribution]] wants to double revenue in [[18 months|Hard time constraint: favors scaling existing channels over new products]]. Where should it focus?",
+    q: { title: "What does \"Series B\" change about how you evaluate options?", options: ["Weigh each option's cash burn and time-to-revenue against runway", "Focus on dividend policy", "Prioritize options with the highest long-term NPV regardless of timing", "Ignore unit economics until IPO"], answer: 0, explain: "A Series B company is runway-constrained. Options that burn cash for revenue after the 18-month window are unattractive even if their NPV looks good." } },
+  { t: "Our client, a [[family-owned|Owners may prioritize control and legacy over pure value maximization]] [[Midwest|Regional freight lanes, labor market, and customer concentration]] [[industrial distributor|Thin gross margins; value is in inventory turns, fill rate, and logistics]], is considering acquiring a [[Canadian|Cross-border tariffs, FX exposure, and integration complexity]] competitor with [[higher margins|Ask why: mix, pricing power, or under-investment; check sustainability]]. Should they buy?",
+    q: { title: "Which question does \"family-owned\" add to your acquisition framework?", options: ["Are the owners willing to take on debt or dilute control to fund the deal?", "What is the target's Instagram following?", "Should the company IPO first?", "What is the global pump market size?"], answer: 0, explain: "Family owners often resist leverage or giving up equity. Financing and control preferences become a gating question before synergies." } },
+  { t: "A [[luxury|Pricing power and brand equity; discounting destroys value]] [[Italian|Made-in-Italy positioning and European supply chain]] handbag maker saw [[sales in mainland China|Market-specific: daigou, tourism flows, local competitors, macro]] fall 20% while [[global sales held flat|Problem is localized, not brand-wide]]. What's going on?",
+    q: { title: "What does \"global sales held flat\" tell you to do first?", options: ["Treat it as a China-specific issue and decompose China sales by channel and customer type", "Redesign the global product line", "Cut prices worldwide", "Assume the brand is in structural decline"], answer: 0, explain: "Flat global sales localize the problem. Start by splitting China into channels (stores, e-commerce, travel retail) and customers (domestic versus outbound tourists)." } },
+  { t: "A [[state-owned|Objectives include public mandate and employment, not only profit]] [[Southeast Asian|Fast-growing demand; infrastructure and regulatory variation by country]] [[utility|Regulated returns; capex-heavy; tariff-setting by regulator]] wants to reach [[40% renewables by 2030|Fixed target and deadline: work backward from required capacity]]. How should it get there?",
+    q: { title: "Which framework branch matters most because the client is a \"utility\" under a regulator?", options: ["How the regulator will let it recover renewable capex through tariffs", "Its social media strategy", "Consumer brand loyalty programs", "Retail store footprint"], answer: 0, explain: "Regulated utilities earn allowed returns on approved capex. Tariff recovery decides whether the plan is financeable." } },
+  { t: "A [[private-equity-owned|Exit horizon of 3-5 years; EBITDA growth and multiple drive decisions]] [[dental clinic chain|Roll-up economics: same-clinic growth versus acquisitions; dentist retention]] in the [[Southeast US|Regional density matters for referrals, staffing, and brand]] has [[flat same-clinic revenue|Organic growth stalled; growth so far may come from acquisitions only]]. How do we restart growth?",
+    q: { title: "What does \"private-equity-owned\" add to how you prioritize levers?", options: ["Favor levers that lift EBITDA within the 3–5 year exit window", "Favor 15-year brand-building programs", "Ignore cost levers", "Prioritize the highest-revenue lever regardless of margin"], answer: 0, explain: "PE owners value EBITDA growth they can show at exit. Fast, margin-accretive levers beat slow brand plays." } },
+  { t: "A [[Japanese|Aging population, conservative consumer adoption, strong domestic incumbents]] [[convenience store|Small footprint, high traffic, fresh food and services drive margin]] operator wants to enter the [[US Sun Belt|Car-centric, fast population growth, competing with gas-station c-stores]] with [[100 stores in three years|Pace constraint: build versus buy (acquire a local chain)]].",
+    q: { title: "\"100 stores in three years\" pushes you to examine which option first?", options: ["Acquiring an existing c-store chain versus building greenfield", "Whether to sell online only", "Japanese domestic pricing", "The history of convenience stores"], answer: 0, explain: "Roughly 33 openings a year is aggressive for greenfield. The timeline makes build-versus-buy the first decision." } },
+  { t: "A [[B2B|Buyers are procurement teams; long sales cycles; contract renewals]] [[cybersecurity SaaS|Recurring revenue: track ARR, net revenue retention, and CAC payback]] company has [[net revenue retention|Expansion minus churn from existing customers]] of 95% and wants to [[go upmarket to enterprise|Longer sales cycles, higher CAC, need for compliance certifications]]. Should it?",
+    q: { title: "Why does 95% net revenue retention matter here?", options: ["The installed base is shrinking, so fix retention before spending on costly enterprise CAC", "It means the company is growing 95% a year", "It is irrelevant to the upmarket decision", "It proves the product has no competitors"], answer: 0, explain: "Below 100% NRR, the base shrinks without new logos. Moving upmarket raises CAC, so leaky retention makes the payback worse." } },
+  { t: "A [[nonprofit|Mission metrics over profit; funding from donors and grants]] [[hospital system|Payer mix (Medicare, Medicaid, commercial) drives revenue per patient]] in [[rural Pennsylvania|Low volume, older patients, physician recruitment challenges]] is losing $20M a year. How do we close the gap?",
+    q: { title: "\"Rural\" forces which revenue question to the top?", options: ["Payer mix and patient volume: how much is Medicare/Medicaid and how many patients leave for urban centers?", "How to raise prices for commercial out-of-state tourists", "Opening a flagship in Manhattan", "Ad spend on national TV"], answer: 0, explain: "Rural hospitals often skew to government payers and lose patients to urban systems. Payer mix and outmigration size the revenue gap." } },
+  { t: "A [[direct-to-consumer|Owns customer data; CAC on paid social is the key cost]] [[mattress|Infrequent purchase (8-10 yrs); repeat revenue is low]] brand saw [[customer acquisition cost|Unit economics: CAC versus contribution per order]] rise 60% after [[iOS privacy changes|Ad tracking loss reduces targeting efficiency on Meta]]. What should it do?",
+    q: { title: "Why does \"mattress\" matter for the CAC problem?", options: ["One purchase every ~8 years means CAC must be recovered on the first order", "Mattresses are digital goods", "It implies a subscription model", "It means CAC is irrelevant"], answer: 0, explain: "With almost no repeat purchase, lifetime value is roughly one order's contribution. A 60% CAC jump hits payback directly." } },
+  { t: "A [[low-cost|Model depends on high utilization, one aircraft type, ancillaries]] [[Latin American|Currency volatility, fuel priced in USD, regulatory differences]] airline wants to add [[transatlantic routes to Spain|Wide-body aircraft needed; competes with network carriers]].",
+    q: { title: "What tension does \"low-cost\" create with this expansion?", options: ["Long-haul needs a second aircraft type and longer turns, eroding low-cost advantages", "Low-cost carriers can't fly to Europe by law", "It means fares must be raised to luxury levels", "None; the model scales anywhere"], answer: 0, explain: "LCC economics rely on fleet commonality and quick turns. Long-haul wide-bodies break both, so ask whether unit costs survive." } },
+  { t: "A [[global|Multi-market: compare performance by region before averaging]] [[consumer packaged goods|Retailer power, trade spend, and shelf space drive margin]] company's [[private-label share|Store brands take share when price gaps widen]] gains in [[UK grocery|Discounters (Aldi, Lidl) and concentrated retailers]] are hurting its [[premium detergent|Category where performance claims justify price premium]] line.",
+    q: { title: "\"UK grocery\" points you toward which competitive force?", options: ["Discounters and concentrated retailer power pushing private label", "US antitrust law", "Chinese manufacturing costs only", "Influencer marketing on TikTok"], answer: 0, explain: "UK grocery is concentrated and discounters are growing fast. Retailer leverage explains private-label pressure better than generic competition." } },
+];
+
+function parsePrompt(t) {
+  const tokens = []; let ci = 0; const cons = [];
+  const re = /\[\[([^|\]]+)\|([^\]]+)\]\]|(\S+)/g; let m;
+  while ((m = re.exec(t))) {
+    if (m[1]) {
+      const id = ci++; cons.push({ phrase: m[1], why: m[2] });
+      m[1].split(/\s+/).forEach(w => tokens.push({ w, c: id }));
+    } else tokens.push({ w: m[3], c: -1 });
+  }
+  // glue punctuation-only tokens? Keep as-is; punctuation stays attached to words.
+  return { tokens, cons };
+}
+function sniperItems(p) {
+  const { tokens, cons } = parsePrompt(p.t);
+  return [
+    { skill: "sniper", type: "tap", tokens, cons, title: "Highlight every descriptor that should change your framework." },
+    { skill: "sniper", type: "mcq", title: p.q.title, options: p.q.options, answer: p.q.answer, explain: p.q.explain, shuffle: true }
+  ];
+}
+
+/* ============================================================
+   CONTENT: Bucket Sharpener
+   ============================================================ */
+const BUCKETS = [
+  { ctx: "US regional bank · profits down 18%", gen: "Competition increased", opts: ["NIM compression as fintechs and online banks bid up deposit rates", "Competitors are more aggressive", "Higher customer acquisition cost on TikTok for a DTC brand", "Lower RevPAR from new hotel supply"], a: 0 },
+  { ctx: "European budget airline · margin down", gen: "Costs went up", opts: ["Jet fuel hedges rolled off at higher prices, plus EU ETS carbon-allowance costs", "Operating expenses rose", "Higher cost of goods sold from cotton prices", "Rising interchange fees"], a: 0 },
+  { ctx: "B2B SaaS · revenue growth slowing", gen: "Customers are leaving", opts: ["Gross revenue churn in the SMB tier after the seat-price increase", "Customer satisfaction fell", "Same-store sales decline from mall traffic", "Lower load factor on regional routes"], a: 0 },
+  { ctx: "Specialty coffee chain · same-store sales down", gen: "Fewer customers", opts: ["Morning-daypart traffic down as hybrid work cut weekday commutes", "Demand fell", "Lower deposit balances from rate-seeking customers", "Fewer enterprise seat renewals"], a: 0 },
+  { ctx: "Big-box retailer · gross margin down 2 pts", gen: "Pricing pressure", opts: ["Heavier promotional markdowns to clear excess seasonal inventory", "Prices are lower", "Reimbursement cuts from Medicare", "Lower take rate on marketplace transactions"], a: 0 },
+  { ctx: "Ride-hailing marketplace · revenue flat despite more trips", gen: "Monetization issues", opts: ["Take rate compressed as driver incentives rose to fix supply shortages", "The business model is weak", "Lower ARPU from mobile data plans", "Higher shrink in grocery stores"], a: 0 },
+  { ctx: "Hospital system · operating loss", gen: "Revenue fell", opts: ["Payer mix shifted toward Medicaid, cutting revenue per admission", "Patients paid less", "Lower yield on commercial loans", "Fewer subscription upgrades"], a: 0 },
+  { ctx: "Mobile carrier · revenue down", gen: "Customers spending less", opts: ["ARPU decline as customers moved to cheaper unlimited plans from MVNOs", "Wallet share fell", "Lower RevPAR from conference cancellations", "Inventory write-downs on apparel"], a: 0 },
+  { ctx: "DTC skincare brand · profitability falling", gen: "Marketing is less effective", opts: ["Paid-social CAC up after iOS tracking changes broke lookalike targeting", "Marketing ROI is bad", "Lower NIM on mortgage book", "Higher landing fees at hub airports"], a: 0 },
+  { ctx: "Hotel chain · urban properties underperforming", gen: "Weak demand", opts: ["RevPAR down as business-travel occupancy hasn't recovered midweek", "Fewer guests", "Lower same-store sales in grocery", "Seat-license churn in enterprise"], a: 0 },
+  { ctx: "Packaged foods maker · volume down at grocers", gen: "Losing to competitors", opts: ["Private-label share gains as the price gap to store brands widened past 30%", "Competition got tougher", "Lower load factor on transatlantic routes", "Higher cloud hosting costs"], a: 0 },
+  { ctx: "Auto OEM · EV unit margins negative", gen: "Production costs high", opts: ["Battery cell costs per kWh above plan plus low plant utilization", "Factories are inefficient", "Lower deposit betas", "Rising credit card chargebacks"], a: 0 },
+  { ctx: "Insurance carrier · underwriting losses", gen: "Claims went up", opts: ["Combined ratio above 100% from severe-weather catastrophe losses in Florida homeowners", "More claims", "Lower take rate on bookings", "Higher shrink from theft"], a: 0 },
+  { ctx: "Payments startup · unit economics worsening", gen: "Costs rose", opts: ["Interchange and network fees rising faster than merchant pricing", "Expenses grew", "Fuel surcharges on long-haul freight", "Higher COGS from coffee bean prices"], a: 0 },
+  { ctx: "Grocery chain · margin erosion", gen: "Operational issues", opts: ["Fresh-food shrink up 1.5 pts from overordering and spoilage", "Operations are inefficient", "Higher CAC on paid search for SaaS", "Lower ARPU on prepaid plans"], a: 0 },
+  { ctx: "Freight trucking company · profit down", gen: "Market conditions", opts: ["Spot rates fell below contract rates as excess capacity hit the freight market", "The market is bad", "Payer-mix shift to Medicare", "Lower NRR in enterprise accounts"], a: 0 },
+  { ctx: "Fitness chain · membership revenue down", gen: "Retention problem", opts: ["Monthly churn spiked among January joiners after the 3-month promo ended", "Members don't stay", "Lower utilization of jet fleet", "Deposit outflows to money-market funds"], a: 0 },
+  { ctx: "Semiconductor fab · revenue miss", gen: "Supply issues", opts: ["Yield losses on the new 3nm node cut sellable wafers per month", "The factory had problems", "Higher markdowns on winter apparel", "Lower take rate from driver incentives"], a: 0 },
+  { ctx: "Streaming service · profit squeezed", gen: "Content is expensive", opts: ["Content amortization rising faster than subscriber ARPU after sports-rights renewals", "Shows cost a lot", "Higher interchange on debit cards", "Lower yields on 3nm wafers"], a: 0 },
+  { ctx: "Luxury brand · China sales down", gen: "Chinese consumers buying less", opts: ["Outbound tourists shifting purchases to Europe where the price gap is 20–30%", "China demand is weak", "Payer mix shift in rural hospitals", "Lower ancillary revenue per passenger"], a: 0 },
+];
+function bucketItem(b) {
+  return {
+    skill: "bucket", type: "mcq", shuffle: true,
+    title: `Generic point: <q>${esc(b.gen)}</q>. Sharpen it.`, context: b.ctx,
+    options: b.opts, answer: b.a,
+    explain: `Specific beats generic: name the <b>metric</b> (NIM, RevPAR, take rate…), the <b>mechanism</b>, and the <b>cause</b> that fits this client. Two distractors are specific but belong to a different industry, which is the constraint check again.`
+  };
+}
+
+/* ============================================================
+   CONTENT: Lingo Lightning
+   ============================================================ */
+const TERMS = [
+  ["NIM", "Net interest margin: (interest earned − interest paid) ÷ interest-earning assets"],
+  ["Deposit beta", "Share of a central-bank rate change a bank passes through to deposit rates"],
+  ["CAC", "Total sales & marketing spend ÷ new customers acquired"],
+  ["LTV", "Contribution per customer per period × expected customer lifetime"],
+  ["Churn", "Share of customers or revenue lost in a period"],
+  ["NRR", "Revenue from an existing customer cohort now ÷ a year ago, including expansion and churn"],
+  ["ARR", "Annualized value of recurring subscription contracts"],
+  ["ARPU", "Revenue ÷ average number of users or subscribers"],
+  ["EBITDA", "Earnings before interest, taxes, depreciation & amortization"],
+  ["Gross margin", "(Revenue − COGS) ÷ revenue"],
+  ["Contribution margin", "Price minus variable cost per unit, before fixed costs"],
+  ["SG&A", "Selling, general & administrative expenses"],
+  ["Operating leverage", "Profit grows faster than revenue because fixed costs stay flat"],
+  ["Breakeven", "Fixed costs ÷ contribution margin per unit"],
+  ["Payback period", "Upfront investment ÷ annual cash flow it generates"],
+  ["CAGR", "Constant annual growth rate that links a start value to an end value"],
+  ["Same-store sales", "Revenue growth from locations open at least a year"],
+  ["Shrink", "Inventory lost to theft, damage, or spoilage"],
+  ["Markdown", "Price reduction to clear inventory"],
+  ["Private label", "Retailer-owned store brand sold alongside national brands"],
+  ["Trade spend", "Payments from a CPG maker to retailers for promotion and shelf placement"],
+  ["RevPAR", "Hotel revenue per available room: occupancy × average daily rate"],
+  ["ADR", "Average daily rate paid per occupied hotel room"],
+  ["Load factor", "Share of an airline's seat-miles actually filled by passengers"],
+  ["RASK / CASK", "Airline revenue / cost per available seat-kilometer"],
+  ["Take rate", "Share of gross transaction value a marketplace keeps as revenue"],
+  ["GMV", "Total value of goods sold through a marketplace before fees"],
+  ["Interchange", "Fee paid by the merchant's bank to the card-issuing bank on a card payment"],
+  ["Combined ratio", "Insurer's (claims + expenses) ÷ earned premiums; under 100% means underwriting profit"],
+  ["Payer mix", "Hospital revenue split across Medicare, Medicaid, commercial insurers, and self-pay"],
+  ["Utilization", "Share of available capacity actually used"],
+  ["Capex", "Spending on long-lived assets such as plants, equipment, or networks"],
+  ["Opex", "Ongoing operating costs of running the business"],
+  ["Working capital", "Current assets minus current liabilities, mostly receivables + inventory − payables"],
+  ["Synergies", "Cost or revenue gains from combining two companies beyond what each achieves alone"],
+  ["Cannibalization", "A new product taking sales from the company's existing products"],
+  ["Burn multiple", "Net cash burned ÷ net new ARR in a startup"],
+  ["Unit economics", "Revenue and cost per single unit, customer, or transaction"],
+  ["Yield (fab)", "Share of chips on a wafer that work and can be sold"],
+  ["Price elasticity", "Percent change in quantity demanded per 1% change in price"],
+  ["Market share", "Company revenue or volume ÷ total market revenue or volume"],
+  ["Run-rate", "Current period's result annualized"],
+];
+function lingoItem() {
+  const [t, d] = pick(TERMS);
+  const others = shuffle(TERMS.filter(x => x[0] !== t)).slice(0, 3);
+  const dir = Math.random() < .5;
+  const opts = shuffle([[t, d], ...others]);
+  return {
+    skill: "lingo", type: "mcq", sprint: true, big: true,
+    title: dir ? t : d, options: opts.map(o => dir ? o[1] : o[0]), answer: opts.findIndex(o => o[0] === t),
+    explain: `${t}: ${d}`
+  };
+}
+
+/* ============================================================
+   CONTENT: Math Sprint (procedural)
+   ============================================================ */
+const MATH_GENS = [
+  () => { const p = pick([5, 12, 15, 18, 25, 35, 40, 45, 60, 75]); const b = pick([2.4, 3.6, 4.8, 8, 12, 16, 24, 1.8]) * pick([1e6, 1e9]); return { q: `${p}% of ${fmtNum(b)}`, a: p / 100 * b }; },
+  () => { const a = ri(4, 18) * 10, ch = pick([-25, -20, -15, -12, -8, 10, 12, 15, 20, 25, 30, 40]); const b = Math.round(a * (1 + ch / 100)); return { q: `% change from ${a} to ${b}`, a: (b - a) / a * 100, unit: "%" }; },
+  () => { const x = pick([12, 15, 25, 35, 45, 60, 80]) * 1e6, y = pick([30, 40, 120, 250, 1.5e3, 2e3]); return { q: `${fmtNum(x)} × ${fmtNum(y)}`, a: x * y }; },
+  () => { const y = pick([12, 15, 20, 25, 40, 60, 80]) * 1e6, k = pick([30, 45, 120, 150, 250, 400]); return { q: `${fmtNum(y * k)} ÷ ${fmtNum(y)}`, a: k }; },
+  () => { const r = pick([120, 250, 400, 640, 800, 1200]), m = pick([6, 8, 12, 15, 18, 22, 30]); const p = r * m / 100; return { q: `Revenue $${r}M, profit $${fmtNum(p)}M. Margin?`, a: m, unit: "%" }; },
+  () => { const f = pick([6, 8, 9, 12, 15, 18, 24]), price = pick([30, 40, 50, 60, 80]), vc = price - pick([10, 12, 15, 20, 25].filter(x => x < price)); return { q: `Fixed costs $${f}M, price $${price}, variable cost $${vc}. Breakeven units?`, a: f * 1e6 / (price - vc) }; },
+  () => { const fr = pick([[1, 8], [3, 8], [1, 6], [5, 6], [1, 7], [2, 3], [1, 12], [3, 16], [5, 8], [1, 9]]); return { q: `${fr[0]}/${fr[1]} as a %`, a: fr[0] / fr[1] * 100, unit: "%", tol: .015 }; },
+  () => { const g = pick([4, 6, 8, 9, 12, 18, 24]); return { q: `Growing ${g}% a year, years to double? (rule of 72)`, a: 72 / g, tol: .05 }; },
+  () => { const b = pick([100, 200, 250, 400, 500]), g = pick([5, 8, 10, 12, 15]), n = pick([2, 3]); return { q: `$${b}M growing ${g}%/yr for ${n} years`, a: b * Math.pow(1 + g / 100, n) * 1e6, tol: .025 }; },
+  () => { const pop = 330e6, share = pick([10, 20, 25, 40]), freq = pick([2, 4, 12]); return { q: `${share}% of 330M people buy ${freq}× a year. Purchases per year?`, a: pop * share / 100 * freq }; },
+  () => { const a = pick([0.6, 0.8, 1.2, 1.5, 2.5]) * 1e9, b = pick([3, 4, 6, 8, 12, 15, 20]); return { q: `${fmtNum(a)} ÷ ${b}%`, a: a / (b / 100), tol: .02 }; },
+  () => { const base = pick([40, 60, 80, 120]), up = pick([10, 20, 25, 50]), dn = pick([10, 20, 25]); return { q: `Up ${up}%, then down ${dn}%. Net % change?`, a: ((1 + up / 100) * (1 - dn / 100) - 1) * 100, unit: "%", tol: .02, abs: 0.6 }; },
+];
+function mathItem() {
+  const g = pick(MATH_GENS)();
+  return { skill: "math", type: "num", sprint: true, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol || .01, abs: g.abs || 0 };
+}
+
+/* ============================================================
+   CONTENT: Problem Solving (procedural word problems)
+   ============================================================ */
+const PROBLEMS = [
+  () => { const share = pick([35, 40, 50]), cups = pick([1.5, 2]), cafe = pick([15, 20, 25]), price = pick([4, 5]);
+    const a = 330e6 * share / 100 * cups * 365 * cafe / 100 * price;
+    return { ctx: "Market sizing · US café coffee", title: `330M people in the US. ${share}% drink coffee, averaging ${cups} cups a day. ${cafe}% of cups are bought at cafés, at $${price} each. What is annual US café coffee revenue?`, a, unit: "$", tol: .04,
+      steps: [`Coffee drinkers: 330M × ${share}% = ${fmtNum(330e6 * share / 100)}`, `Cups per year: × ${cups} × 365 = ${fmtNum(330e6 * share / 100 * cups * 365)}`, `Café cups: × ${cafe}% = ${fmtNum(330e6 * share / 100 * cups * 365 * cafe / 100)}`, `Revenue: × $${price} ≈ ${money(a)}`] }; },
+  () => { const cost = pick([4, 6, 8, 9, 12]), save = pick([0.5, 0.8, 1.2, 1.5]), units = pick([2, 2.5, 4, 5]);
+    const ann = save * units; const a = cost / ann;
+    return { ctx: "Investment · automation payback", title: `A packaging line upgrade costs $${cost}M and saves $${save.toFixed(2)} per unit. The plant ships ${units}M units a year. What is the payback period in years?`, a, unit: "yrs", tol: .03,
+      steps: [`Annual savings: $${save.toFixed(2)} × ${units}M = $${fmtNum(ann)}M`, `Payback: $${cost}M ÷ $${fmtNum(ann)}M ≈ ${a.toFixed(1)} years`] }; },
+  () => { const arpu = pick([25, 30, 40, 50]), gm = pick([60, 70, 75, 80]), churn = pick([2, 2.5, 4, 5]);
+    const a = arpu * gm / 100 / (churn / 100);
+    return { ctx: "Subscription · customer LTV", title: `A subscription app earns $${arpu}/month per user at a ${gm}% gross margin. Monthly churn is ${churn}%. What is customer lifetime value (gross-margin basis)?`, a, unit: "$", tol: .03,
+      steps: [`Monthly margin per user: $${arpu} × ${gm}% = $${fmtNum(arpu * gm / 100)}`, `Expected lifetime: 1 ÷ ${churn}% = ${fmtNum(100 / churn)} months`, `LTV ≈ $${fmtNum(arpu * gm / 100)} × ${fmtNum(100 / churn)} = ${money(a)}`] }; },
+  () => { const loans = pick([12, 18, 20, 25]), ly = pick([5.5, 6, 6.5, 7]), dep = loans - pick([1, 2, 3]), dr = pick([1.5, 2, 2.5, 3]);
+    const a = (loans * ly / 100 - dep * dr / 100) * 1e9;
+    return { ctx: "Banking · net interest income", title: `A regional bank holds $${loans}B of loans yielding ${ly}% and $${dep}B of deposits costing ${dr}%. Ignoring other items, what is annual net interest income?`, a, unit: "$", tol: .02,
+      steps: [`Interest earned: $${loans}B × ${ly}% = $${fmtNum(loans * ly / 100 * 1e9)}`, `Interest paid: $${dep}B × ${dr}% = $${fmtNum(dep * dr / 100 * 1e9)}`, `NII ≈ ${money(a)}`] }; },
+  () => { const rev = pick([400, 500, 800, 1000]), m1 = pick([6, 8, 10]), m2 = m1 + pick([3, 4, 5]);
+    // costs fixed in dollars; new revenue R2 satisfies (R2 − C)/R2 = m2
+    const C = rev * (1 - m1 / 100); const R2 = C / (1 - m2 / 100); const a = (R2 / rev - 1) * 100;
+    return { ctx: "Profitability · pricing target", title: `Revenue is $${rev}M at an ${m1}% operating margin. If costs and volume stay flat, by what % must prices rise to reach a ${m2}% margin?`, a, unit: "%", tol: .03, abs: .15,
+      steps: [`Costs: $${rev}M × (1 − ${m1}%) = $${fmtNum(C)}M`, `Revenue needed: $${fmtNum(C)}M ÷ (1 − ${m2}%) = $${fmtNum(R2)}M`, `Price increase: $${fmtNum(R2)}M ÷ $${rev}M − 1 ≈ ${a.toFixed(1)}%`] }; },
+  () => { const cf = pick([4, 5, 6, 8, 10]), r = pick([8, 10, 12]), g = pick([0, 0, 2, 3]);
+    const a = cf / ((r - g) / 100) * 1e6;
+    return { ctx: "Valuation · perpetuity", title: `An acquisition target generates $${cf}M of free cash flow next year${g ? `, growing ${g}% a year forever` : " forever, with no growth"}. At a ${r}% discount rate, what is it worth?`, a, unit: "$", tol: .02,
+      steps: [`Value = CF ÷ (r − g) = $${cf}M ÷ (${r}% − ${g}%)`, `= $${cf}M ÷ ${(r - g) / 100} ≈ ${money(a)}`] }; },
+  () => { const mkt = pick([2, 3, 4, 5]), share = pick([4, 5, 6]), tgt = share + pick([2, 3, 4]), g = pick([0, 5, 10]);
+    const now = mkt * share / 100, fut = mkt * Math.pow(1 + g / 100, 2) * tgt / 100; const a = (Math.sqrt(fut / now) - 1) * 100;
+    return { ctx: "Growth · market share target", title: `The market is $${mkt}B and grows ${g}% a year. Your client has ${share}% share. To hold ${tgt}% share in 2 years, what annual revenue growth (CAGR) does the client need?`, a, unit: "%", tol: .04, abs: .5,
+      steps: [`Client revenue now: $${mkt}B × ${share}% = $${fmtNum(now * 1e9)}`, `Market in 2 yrs: $${mkt}B × ${(1 + g / 100).toFixed(2)}² = $${fmtNum(mkt * Math.pow(1 + g / 100, 2) * 1e9)}`, `Target revenue: × ${tgt}% = $${fmtNum(fut * 1e9)}`, `CAGR = √(${fmtNum(fut * 1e9)} ÷ ${fmtNum(now * 1e9)}) − 1 ≈ ${a.toFixed(1)}%`] }; },
+  () => { const stores = pick([200, 400, 600]), traffic = pick([800, 1000, 1200]), conv = pick([20, 25, 30]), ticket = pick([30, 40, 50]), days = 360;
+    const a = stores * traffic * conv / 100 * ticket * days;
+    return { ctx: "Retail · revenue build", title: `A chain has ${stores} stores. Each sees ${traffic} visitors a day, ${conv}% buy, average ticket $${ticket}. Stores open ~360 days. Annual revenue?`, a, unit: "$", tol: .03,
+      steps: [`Buyers per store per day: ${traffic} × ${conv}% = ${traffic * conv / 100}`, `Daily revenue per store: × $${ticket} = $${fmtNum(traffic * conv / 100 * ticket)}`, `Chain annual: × ${stores} × 360 ≈ ${money(a)}`] }; },
+  () => { const fleet = pick([40, 60, 80]), seats = pick([180, 190]), flights = pick([5, 6]), lf = pick([80, 85, 90]), fare = pick([70, 90, 110]);
+    const a = fleet * seats * flights * 365 * lf / 100 * fare;
+    return { ctx: "Airline · ticket revenue", title: `A low-cost carrier flies ${fleet} aircraft with ${seats} seats, ${flights} flights per aircraft per day, at an ${lf}% load factor and $${fare} average fare. Annual ticket revenue?`, a, unit: "$", tol: .03,
+      steps: [`Seats flown per day: ${fleet} × ${seats} × ${flights} = ${fmtNum(fleet * seats * flights)}`, `Passengers per year: × 365 × ${lf}% = ${fmtNum(fleet * seats * flights * 365 * lf / 100)}`, `Revenue: × $${fare} ≈ ${money(a)}`] }; },
+];
+function problemItem() {
+  const p = pick(PROBLEMS)();
+  return { skill: "problem", type: "num", context: p.ctx, title: p.title, answer: p.a, unit: p.unit === "$" ? "" : p.unit, dollars: p.unit === "$", tol: p.tol, abs: p.abs || 0, steps: p.steps };
+}
+
+/* ============================================================
+   CONTENT: Three-Sentence Close
+   ============================================================ */
+const CLOSES = [
+  { sit: "A European regional bank asks whether to launch a mobile-first brand to win back deposits from neobanks.",
+    facts: ["Deposits down 9% in 2 years, mostly under-35 customers", "Building the brand costs €60M; break-even in year 4 at 150K customers", "Neobank customers hold small balances (avg €2K vs €11K at the bank)", "Partnering with an existing BaaS platform cuts launch cost to €25M"],
+    model: "The bank should launch the mobile-first brand, but through a BaaS partnership rather than building it in-house. Partnering cuts the upfront cost from €60M to €25M and targets the under-35 segment that drove most of the 9% deposit decline. The main risk is that neobank customers bring small balances, so we should pilot in two markets and track deposits per customer against the €11K core average before scaling.",
+    weak: "There are a lot of considerations here, including deposits, costs and competition. The neobanks are clearly a threat and digital is the future of banking. Building a brand is expensive but could pay off in the long run. I think the bank should probably look into a digital offering of some kind. We'd also want to think about the risks and do more analysis." },
+  { sit: "A US specialty coffee chain asks whether to close its 40 lowest-performing urban stores.",
+    facts: ["Those 40 stores lose $6M a year combined", "Closing costs $10M one-time (leases, severance)", "Nearby stores would capture ~30% of their sales", "Urban weekday traffic is down 22% since hybrid work"],
+    model: "The client should close the 40 underperforming urban stores. They lose $6M a year, so the $10M closing cost pays back in under two years, and nearby stores should recapture about 30% of the lost sales. The key risk is losing brand presence downtown, so next we should test converting 5 of them to smaller pickup-only formats before closing them all.",
+    weak: "Urban stores are struggling because of hybrid work and lower traffic. Some of them lose money while others might be okay. Closing them has costs but could also save money over time. We should probably consider closing some of them. More analysis on each store would help us decide." },
+  { sit: "A Series B fintech asks whether to expand its earned-wage-access product from the US into the UK.",
+    facts: ["14 months of runway at current burn", "UK market ~40% the size of US, regulation still forming", "UK launch costs $8M and takes 9 months before first revenue", "US employer pipeline could add 60% revenue at $3M extra sales spend"],
+    model: "The company should not enter the UK now and should instead double down on its US employer pipeline. A $3M sales push could add 60% revenue, while the UK costs $8M and earns nothing for 9 of its 14 months of runway. We should revisit the UK after the next raise, once regulation there is clearer.",
+    weak: "The UK is an interesting market with lots of potential. However it is smaller than the US and regulation is unclear. The company does not have a lot of runway. There are good opportunities in the US as well. It might make sense to wait, but it depends on investor appetite." },
+  { sit: "A PE-owned dental chain asks how to restart flat same-clinic revenue before a planned exit in 3 years.",
+    facts: ["Hygiene recall rate is 48% vs 65% industry benchmark", "Chairs are used 61% of open hours", "Raising recall to 60% adds ~$14M revenue at ~40% margin", "New-clinic openings take 2 years to break even"],
+    model: "The chain should prioritize lifting its hygiene recall rate from 48% to 60% over opening new clinics. That alone adds about $14M of revenue at roughly 40% margin, uses idle chair capacity at 61% utilization, and shows up in EBITDA well before the 3-year exit. The risk is front-desk execution, so next step is to pilot automated recall reminders in 10 clinics and track rebook rates monthly.",
+    weak: "There are several ways to grow, like recall, new clinics, and pricing. Recall seems low compared to peers. Chair utilization could also be better. New clinics take a while to pay back. The PE firm will want growth before exit so we should do a combination of things." },
+  { sit: "A packaged-foods maker asks whether to launch its own private-label line for a major UK grocer.",
+    facts: ["Branded volume down 11% as store brands gain share", "Plant runs at 68% utilization", "Private-label contract: £40M revenue at 9% margin vs 22% on branded", "Grocer estimates 15% cannibalization of the client's branded sales"],
+    model: "The client should accept the private-label contract. It fills idle capacity at a plant running at 68% utilization and adds £40M of revenue, which more than offsets the expected 15% cannibalization of branded sales. The main risk is training shoppers to trade down, so the contract should exclude the premium SKUs and come up for review after 12 months.",
+    weak: "Private label is growing in the UK and that is hurting the brand. The plant has spare capacity, which is a consideration. However margins are lower on private label and there could be cannibalization. On balance it might be worth exploring if the numbers work. Let's discuss with the grocer further." },
+  { sit: "A Latin American low-cost airline asks whether to launch routes to Spain.",
+    facts: ["Requires 4 wide-body aircraft, a new fleet type", "Long-haul unit cost (CASK) would be 35% above its short-haul network", "Projected load factor 78% vs 88% domestically", "Domestic demand growing 9% a year with a gate-slot backlog"],
+    model: "The airline should not launch Spain routes and should instead add capacity on its domestic network. Long-haul would need a new wide-body fleet with 35% higher unit costs and a weaker 78% load factor, while domestic demand is growing 9% a year. Next step is to secure the backlog of domestic gate slots and revisit long-haul through a codeshare partner rather than its own aircraft.",
+    weak: "International expansion is exciting and Spain has strong ties to Latin America. But long-haul is different from what the airline does today. Costs would be higher and load factors lower. The domestic market is also attractive. We need to weigh both options carefully before deciding." },
+  { sit: "A rural nonprofit hospital system asks how to close a $20M annual operating loss.",
+    facts: ["62% of revenue from Medicare and Medicaid", "28% of local patients travel to urban hospitals for surgery", "Two of five facilities run at under 40% occupancy", "Consolidating the two facilities saves $11M a year"],
+    model: "The system should consolidate its two lowest-occupancy facilities and use the savings to win back surgical patients. Consolidation saves about $11M a year, and recapturing even half of the 28% of patients who travel for surgery would close most of the remaining gap. The main risk is community backlash over access, so we should keep urgent-care clinics at both sites and present the plan with local leaders first.",
+    weak: "The hospital faces many challenges including payer mix, patient outmigration, and low occupancy. Rural hospitals across the country face similar problems. There are options around consolidation and growth. Each has pros and cons. We should probably prioritize the ones that are most feasible." },
+  { sit: "A DTC mattress brand asks how to respond to a 60% rise in customer acquisition cost.",
+    facts: ["CAC rose from $250 to $400 after iOS privacy changes", "Contribution per order is $420", "Customers buy once every ~8 years", "Retail partner offers shelf space in 300 stores at 30% wholesale discount"],
+    model: "The brand should take the retail partnership and cut paid-social spend. At $400 CAC against $420 contribution per order, it barely breaks even on customers who buy once every 8 years, while the retail channel reaches new buyers without paid acquisition despite the 30% wholesale discount. The risk is channel conflict with its own site, so next step is a 50-store pilot comparing contribution per unit against DTC.",
+    weak: "CAC has gone up a lot because of iOS changes. That makes it harder to be profitable. Retail could be an option, though it comes with a discount. They could also try other marketing channels like influencers or TV. There is no easy answer and they should test different approaches." },
+];
+function sentences(text) {
+  const t = text.trim().replace(/\s+/g, " ");
+  if (!t) return [];
+  // Protect decimals and common abbreviations
+  const prot = t.replace(/(\d)\.(\d)/g, "$1§$2").replace(/\b(e\.g|i\.e|vs|approx|U\.S|etc)\./gi, m => m.replace(/\./g, "§"));
+  return prot.split(/(?<=[.!?])\s+/).map(s => s.replace(/§/g, ".")).filter(s => s.trim().length > 2);
+}
+function gradeClose(text) {
+  const ss = sentences(text);
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const first = ss[0] || "";
+  const checks = [
+    { label: "Exactly three sentences", ok: ss.length === 3, w: 2 },
+    { label: "Answer first: sentence 1 is a clear verdict", ok: /\b(should|shouldn't|should not|recommend|go ahead|do not|don't|yes|no)\b/i.test(first) && !/\b(depends|it's hard|complicated|consider(ing)?|explore)\b/i.test(first), w: 1 },
+    { label: "Reasons carry at least two numbers", ok: (text.match(/\d+(\.\d+)?/g) || []).length >= 2, w: 1 },
+    { label: "Ends with a risk and a next step", ok: /\b(risk|next step|pilot|test|monitor|track|revisit|watch|mitigat)/i.test(ss[ss.length - 1] || ""), w: 1 },
+  ];
+  const hedges = (text.match(/\b(I think|maybe|perhaps|probably|kind of|sort of|might|could potentially|it depends)\b/gi) || []);
+  let score = checks.reduce((a, c) => a + (c.ok ? c.w : 0), 0);
+  if (ss.length === 2 || ss.length === 4) score += 1, checks[0].partial = true;
+  if (hedges.length) score -= 1;
+  if (words > 90) score -= 1;
+  return { ss, words, checks, hedges, score: clamp(score, 0, 5) };
+}
+function closePickItem(c) {
+  const long = "To recap, we looked at the market, the company's economics, and the competitive landscape. " + c.model + " We could also run additional analyses on customer segments. Overall, it's a nuanced picture with several moving parts.";
+  const opts = shuffle([{ t: c.model, ok: true }, { t: c.weak, ok: false }, { t: long, ok: false }]);
+  return {
+    skill: "close", type: "mcq", context: c.sit, facts: c.facts,
+    title: "Partner: \"Give me your recommendation.\" Pick the best close.",
+    options: opts.map(o => o.t), answer: opts.findIndex(o => o.ok),
+    explain: "The winner is exactly three sentences: verdict, reasons with numbers, risk plus next step. The long version contains the right answer but buries it between a recap and filler. The weak one never commits and has no numbers."
+  };
+}
+function closeWriteItem(c) {
+  return { skill: "close", type: "text", context: c.sit, facts: c.facts, model: c.model, title: "Write your three-sentence close." };
+}
+
+/* ============================================================
+   Session building
+   ============================================================ */
+let S = null;            // active session
+let screen = "home";
+let timerId = null;
+let bag = {};            // non-repeating draws
+function draw(name, arr) {
+  if (!bag[name] || !bag[name].length) bag[name] = shuffle(arr.map((_, i) => i));
+  return arr[bag[name].pop()];
+}
+
+function skillStats() {
+  const out = {};
+  for (const k of Object.keys(SKILLS)) out[k] = { items: [], sessions: [] };
+  for (const r of Store.recs) {
+    const per = {};
+    for (const it of r.items) {
+      if (!out[it.s]) continue;
+      out[it.s].items.push(it);
+      (per[it.s] = per[it.s] || []).push(it);
+    }
+    for (const k in per) {
+      const arr = per[k];
+      out[k].sessions.push({ ts: r.ts, acc: arr.reduce((a, b) => a + b.ok, 0) / arr.length, ms: arr.reduce((a, b) => a + b.ms, 0) / arr.length });
+    }
+  }
+  for (const k in out) {
+    const o = out[k], recent = o.items.slice(-40), n = recent.length;
+    o.n = o.items.length;
+    o.acc = n ? recent.reduce((a, b) => a + b.ok, 0) / n : null;
+    o.ms = n ? recent.reduce((a, b) => a + b.ms, 0) / n : null;
+    o.fast = n ? recent.filter(i => i.ms <= SKILLS[k].target).length / n : 0;
+    o.mastery = n ? Math.round((0.7 * o.acc + 0.3 * o.fast) * 100 * Math.min(1, n / 20)) : 0;
+    o.status = !n ? "new" : o.mastery >= 85 ? "mast" : o.mastery >= 60 ? "prog" : "work";
+  }
+  return out;
+}
+function weakest(stats) {
+  const ks = Object.keys(SKILLS);
+  const untried = ks.filter(k => stats[k].n === 0);
+  if (untried.length) return untried[0];
+  return ks.slice().sort((a, b) => stats[a].mastery - stats[b].mastery)[0];
+}
+
+function itemsFor(skill, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    if (skill === "bucket") out.push(bucketItem(draw("bucket", BUCKETS)));
+    else if (skill === "lingo") out.push({ ...lingoItem(), sprint: false });
+    else if (skill === "math") out.push({ ...mathItem(), sprint: false });
+    else if (skill === "problem") out.push(problemItem());
+    else if (skill === "close") out.push(closePickItem(draw("close", CLOSES)));
+    else if (skill === "sniper") out.push(...sniperItems(draw("prompt", PROMPTS)));
+    else if (skill === "metric") out.push(...metricRound());
+  }
+  return out;
+}
+
+function buildQueue(mode) {
+  if (mode === "metric") return [...metricRound(), ...metricRound(), ...metricRound()];
+  if (mode === "sniper") return [0, 1, 2].flatMap(() => sniperItems(draw("prompt", PROMPTS)));
+  if (mode === "bucket") return Array.from({ length: 8 }, () => bucketItem(draw("bucket", BUCKETS)));
+  if (mode === "problem") return Array.from({ length: 4 }, problemItem);
+  if (mode === "close") { const a = draw("close", CLOSES), b = draw("close", CLOSES), c = draw("close", CLOSES), d = draw("close", CLOSES); return [closePickItem(a), closeWriteItem(b), closePickItem(c), closeWriteItem(d)]; }
+  if (mode === "daily") {
+    const w = weakest(skillStats());
+    const q = [...itemsFor("metric", 1), ...itemsFor("bucket", 2), ...itemsFor("math", 2), ...itemsFor("sniper", 1), ...itemsFor("lingo", 2), ...itemsFor("close", 1), ...itemsFor(w, w === "metric" || w === "sniper" ? 1 : 2)];
+    return q;
+  }
+  return [];
+}
+
+function startSession(mode) {
+  const sprint = mode === "math" ? 90 : mode === "lingo" ? 60 : 0;
+  S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [] };
+  if (sprint) { S.endAt = Date.now() + sprint * 1000; S.queue.push(mode === "math" ? mathItem() : lingoItem()); }
+  renderGame();
+  if (sprint) tickTimer();
+  scrollTo(0, 0);
+}
+
+function current() { return S.queue[S.idx]; }
+
+function record(ok, extra) {
+  const q = current(), ms = Date.now() - S.qStart;
+  const okv = clamp(+ok, 0, 1);
+  const full = okv >= .75;
+  S.combo = full ? S.combo + 1 : 0;
+  S.bestCombo = Math.max(S.bestCombo, S.combo);
+  const target = SKILLS[q.skill].target;
+  const gained = Math.round(okv * 10 + (full && ms <= target ? 5 : 0) + (full ? Math.min(S.combo, 10) : 0));
+  S.xp += gained;
+  S.items.push({ s: q.skill, ok: +okv.toFixed(2), ms });
+  S.results.push({ q, ok: okv, ms, extra });
+  updateHud(gained);
+  return { okv, full, ms, gained };
+}
+
+function next() {
+  if (!S) return;
+  if (S.sprint) {
+    if (Date.now() >= S.endAt) return finish();
+    S.queue.push(S.mode === "math" ? mathItem() : lingoItem());
+  }
+  S.idx++;
+  if (S.idx >= S.queue.length) return finish();
+  renderQuestion();
+}
+
+/* ============================================================
+   Rendering: home
+   ============================================================ */
+function totals() {
+  const xp = Store.recs.reduce((a, r) => a + (r.xp || 0), 0);
+  const days = [...new Set(Store.recs.map(r => dayKey(r.ts)))];
+  let streak = 0; const d = new Date();
+  const has = k => days.includes(k);
+  if (!has(dayKey(d))) d.setDate(d.getDate() - 1);
+  while (has(dayKey(d))) { streak++; d.setDate(d.getDate() - 1); }
+  const today = Store.recs.filter(r => dayKey(r.ts) === dayKey(Date.now()));
+  const items = Store.recs.reduce((a, r) => a + r.items.length, 0);
+  return { xp, streak, todayCount: today.length, todayXp: today.reduce((a, r) => a + r.xp, 0), items, sessions: Store.recs.length };
+}
+
+function sparkSVG(points, color) {
+  const w = 96, h = 28, pad = 3;
+  if (points.length < 2) return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><line x1="${pad}" x2="${w - pad}" y1="${h / 2}" y2="${h / 2}" stroke="var(--line)" stroke-dasharray="3 3"/></svg>`;
+  const xs = i => pad + i * (w - 2 * pad) / (points.length - 1);
+  const ys = v => h - pad - v * (h - 2 * pad);
+  const d = points.map((v, i) => `${i ? "L" : "M"}${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join("");
+  const area = d + `L${xs(points.length - 1).toFixed(1)},${h - pad}L${pad},${h - pad}Z`;
+  const last = points[points.length - 1];
+  const dots = points.map((v, i) => `<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="6" fill="transparent"><title>Session ${i + 1}: ${pct(v)}</title></circle>`).join("");
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Accuracy over last ${points.length} sessions"><path d="${area}" fill="${color}" opacity=".12"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xs(points.length - 1).toFixed(1)}" cy="${ys(last).toFixed(1)}" r="3" fill="${color}"/>${dots}</svg>`;
+}
+
+const BADGES = [
+  { id: "first", name: "First billable hour", test: (t) => t.sessions >= 1 },
+  { id: "streak3", name: "3-day streak", test: (t) => t.streak >= 3 },
+  { id: "streak7", name: "7-day streak", test: (t) => t.streak >= 7 },
+  { id: "combo10", name: "Combo ×10", test: () => Store.recs.some(r => (r.bestCombo || 0) >= 10) },
+  { id: "purist", name: "Three-sentence purist", test: () => Store.recs.flatMap(r => r.items).filter(i => i.s === "close" && i.ok >= 1).length >= 5 },
+  { id: "sprint20", name: "20 in a Math Sprint", test: () => Store.recs.some(r => r.mode === "math" && r.items.filter(i => i.ok >= 1).length >= 20) },
+  { id: "sniper", name: "Clean sweep sniper", test: () => Store.recs.flatMap(r => r.items).some(i => i.s === "sniper" && i.ok >= 1 && i.tap) },
+  { id: "all7", name: "Played every skill", test: () => { const s = new Set(Store.recs.flatMap(r => r.items.map(i => i.s))); return Object.keys(SKILLS).every(k => s.has(k)); } },
+  { id: "master", name: "First skill mastered", test: (t, st) => Object.values(st).some(o => o.status === "mast") },
+];
+
+function renderHome() {
+  S = null; clearInterval(timerId); screen = "home";
+  const t = totals(), st = skillStats(), rk = rankFor(t.xp), w = weakest(st);
+  $("#streakChip").textContent = `🔥 ${t.streak}-day streak`;
+  const prog = rk.next ? (t.xp - rk.floor) / (rk.next - rk.floor) : 1;
+  const wName = SKILLS[w].short;
+  const modeCard = k => {
+    const m = MODES[k], s = st[m.skill];
+    return `<button class="mode" type="button" data-mode="${k}">
+      <span class="row"><h3>${m.name}</h3><span class="tag ${m.tag.startsWith("Gap") ? "hl" : ""}">${m.tag}</span></span>
+      <p>${m.blurb}</p>
+      <span class="meta"><span>${m.len}</span><span>${s.n ? `Mastery <b class="num">${s.mastery}</b>` : "Not played yet"}</span></span>
+    </button>`;
+  };
+  const row = k => {
+    const s = st[k], pts = s.sessions.slice(-10).map(x => x.acc);
+    const label = { new: "Not started", work: "Needs work", prog: "Improving", mast: "Mastered" }[s.status];
+    const trend = s.sessions.length >= 4 ? (() => { const a = s.sessions.slice(-2), b = s.sessions.slice(-4, -2); const da = (a[0].acc + a[1].acc) / 2 - (b[0].acc + b[1].acc) / 2; return da > .03 ? `<span class="delta-up">▲ ${pct(da)}</span>` : da < -.03 ? `<span class="delta-dn">▼ ${pct(-da)}</span>` : `<span class="muted">steady</span>`; })() : `<span class="muted">—</span>`;
+    return `<tr>
+      <td><b>${SKILLS[k].name}</b></td>
+      <td><span class="pill ${s.status}">${label}</span></td>
+      <td><div class="mbar ${s.status === "mast" ? "done" : ""}" title="Mastery ${s.mastery}/100"><i style="width:${s.mastery}%"></i></div></td>
+      <td class="num">${s.acc == null ? "—" : pct(s.acc)}</td>
+      <td class="num">${s.ms == null ? "—" : (s.ms / 1000).toFixed(1) + "s"} <span class="muted">/ ${(SKILLS[k].target / 1000).toFixed(0)}s</span></td>
+      <td>${sparkSVG(pts, "var(--accent)")}</td>
+      <td>${trend}</td>
+    </tr>`;
+  };
+  const recent = Store.recs.slice(-6).reverse().map(r => {
+    const acc = r.items.length ? r.items.reduce((a, b) => a + b.ok, 0) / r.items.length : 0;
+    const d = new Date(r.ts);
+    return `<tr><td>${MODES[r.mode] ? MODES[r.mode].name : r.mode}</td><td class="num">${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</td><td class="num">${pct(acc)}</td><td class="num">${r.items.length}</td><td class="num">+${r.xp}</td></tr>`;
+  }).join("");
+
+  $("#view").innerHTML = `
+  <div class="wrap" style="gap:22px">
+    <section class="hero">
+      <div class="card rank-card">
+        <span class="eyebrow">Current title</span>
+        <div class="rank-title">${rk.name}</div>
+        <div class="xpbar" title="${t.xp} XP"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
+        <p class="muted" style="font-size:.85rem">${rk.next ? `<b class="num">${rk.next - t.xp}</b> XP to ${rk.nextName}` : "Top of the pyramid. Go take a sabbatical."}</p>
+        <div class="stats-row">
+          <div class="stat"><b>${t.xp.toLocaleString()}</b><span>total XP</span></div>
+          <div class="stat"><b>${t.todayCount}</b><span>sessions today</span></div>
+          <div class="stat"><b>${t.items}</b><span>items answered</span></div>
+        </div>
+      </div>
+      <div class="card shift">
+        <span class="eyebrow">Today's shift · ${t.todayCount ? `+${t.todayXp} XP so far` : "not clocked in"}</span>
+        <h2>Daily Shift</h2>
+        <p>A 7-minute mix of all four gaps plus math, with two extra reps on your weakest skill: <b>${wName}</b>.</p>
+        <button class="btn primary" type="button" data-mode="daily">Clock in <kbd style="background:transparent;color:inherit;border-color:currentColor">D</kbd></button>
+      </div>
+    </section>
+
+    <section class="wrap" style="gap:12px">
+      <div class="section-head"><h2>Drill your gaps</h2><span class="muted" style="font-size:.85rem">Each mode targets one habit from your list</span></div>
+      <div class="modes">${["metric", "sniper", "close", "bucket", "lingo"].map(modeCard).join("")}</div>
+    </section>
+
+    <section class="wrap" style="gap:12px">
+      <div class="section-head"><h2>Math Gym</h2><span class="muted" style="font-size:.85rem">Type answers like 2.4m, 840k, 12% or 1.5b</span></div>
+      <div class="mode-math">${["math", "problem"].map(modeCard).join("")}</div>
+    </section>
+
+    <section class="card wrap" style="gap:12px">
+      <div class="section-head"><h2>Progress to mastery</h2><span class="muted" style="font-size:.82rem">Last 40 items per skill · mastery = 70% accuracy + 30% speed vs target · needs 20 items</span></div>
+      <div class="ptable-wrap"><table class="ptable">
+        <thead><tr><th>Skill</th><th>Status</th><th>Mastery</th><th>Accuracy</th><th>Avg time / target</th><th>Last 10 sessions</th><th>Trend</th></tr></thead>
+        <tbody>${Object.keys(SKILLS).map(row).join("")}</tbody>
+      </table></div>
+    </section>
+
+    <section class="hero duo">
+      <div class="card wrap" style="gap:10px">
+        <h3>Recent sessions</h3>
+        ${recent ? `<div class="ptable-wrap"><table class="ptable" style="min-width:380px"><thead><tr><th>Mode</th><th>When</th><th>Acc.</th><th>Items</th><th>XP</th></tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="muted">Nothing yet. Your first Daily Shift will show up here with its accuracy and speed.</p>`}
+      </div>
+      <div class="card wrap" style="gap:10px">
+        <h3>Badges</h3>
+        <div class="badges">${BADGES.map(b => `<span class="badge ${b.test(t, st) ? "got" : ""}">${b.name}</span>`).join("")}</div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>Progress ${Store.col ? "syncs to your account" : "is saved in this browser"}.</span>
+      <button class="linkbtn" type="button" id="backupBtn">Back up or restore</button>
+    </footer>
+    <div class="card backup" id="backupBox" hidden>
+      <h3>Backup</h3>
+      <p class="muted" style="font-size:.85rem">Copy this text somewhere safe. Paste a backup and press Restore to merge it in.</p>
+      <textarea id="backupText" spellcheck="false"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="copyBtn">Copy</button><button class="btn" type="button" id="restoreBtn">Restore</button><span id="backupMsg" class="muted" style="align-self:center;font-size:.85rem"></span></div>
+    </div>
+  </div>`;
+
+  $("#view").querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => startSession(b.dataset.mode)));
+  $("#backupBtn").addEventListener("click", () => {
+    const box = $("#backupBox"); box.hidden = !box.hidden;
+    $("#backupText").value = JSON.stringify(Store.recs);
+  });
+  $("#copyBtn").addEventListener("click", () => {
+    const ta = $("#backupText");
+    navigator.clipboard.writeText(ta.value).then(() => $("#backupMsg").textContent = "Copied.", () => { ta.select(); $("#backupMsg").textContent = "Press Ctrl/Cmd+C to copy."; });
+  });
+  $("#restoreBtn").addEventListener("click", async () => {
+    try { const n = await Store.importAll(JSON.parse($("#backupText").value)); $("#backupMsg").textContent = `Restored ${n} session${n === 1 ? "" : "s"}.`; setTimeout(renderHome, 900); }
+    catch (e) { $("#backupMsg").textContent = "That text isn't a valid backup. Paste the full text you copied earlier."; }
+  });
+}
+
+/* ============================================================
+   Rendering: game
+   ============================================================ */
+function renderGame() {
+  screen = "game";
+  const m = MODES[S.mode];
+  $("#view").innerHTML = `
+  <div class="wrap" style="gap:14px">
+    <div class="gamebar">
+      <div class="left"><button class="btn ghost" type="button" id="quitBtn" aria-label="Quit session">✕ Quit</button><h2>${m.name}</h2></div>
+      <div class="hud"><span class="combo" id="combo"></span><span class="timer" id="timer" ${S.sprint ? "" : "hidden"}></span><span class="chip"><b class="num" id="xpHud">0</b>&nbsp;XP</span></div>
+    </div>
+    <div class="pips" id="pips" ${S.sprint ? "hidden" : ""}></div>
+    <section class="card stage" id="stage"></section>
+    <p class="hint">Keys: <kbd>1</kbd>–<kbd>4</kbd> answer · <kbd>Enter</kbd> submit / next · <kbd>Esc</kbd> quit</p>
+  </div>`;
+  $("#quitBtn").addEventListener("click", () => (S.items.length ? finish() : renderHome()));
+  renderQuestion();
+}
+
+function updateHud(gained) {
+  $("#xpHud").textContent = S.xp;
+  const c = $("#combo");
+  if (S.combo >= 2) { c.textContent = `×${S.combo} combo`; c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); }
+  else c.textContent = "";
+  renderPips();
+}
+function renderPips() {
+  if (S.sprint) return;
+  $("#pips").innerHTML = S.queue.map((_, i) => {
+    const r = S.results[i];
+    const cls = r ? (r.ok >= .75 ? "ok" : r.ok >= .4 ? "part" : "no") : i === S.idx ? "cur" : "";
+    return `<span class="pip ${cls}"></span>`;
+  }).join("");
+}
+function tickTimer() {
+  clearInterval(timerId);
+  const el = $("#timer");
+  const f = () => {
+    if (!S || !S.sprint) return clearInterval(timerId);
+    const left = Math.max(0, Math.ceil((S.endAt - Date.now()) / 1000));
+    el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+    el.classList.toggle("low", left <= 10);
+    if (left <= 0) { clearInterval(timerId); finish(); }
+  };
+  f(); timerId = setInterval(f, 250);
+}
+
+function contextBlock(q) {
+  let h = "";
+  if (q.context) h += `<span class="eyebrow">${esc(q.context)}</span>`;
+  if (q.facts) h += `<div class="exhibit"><span class="cap">Case facts</span><ul class="facts">${q.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>`;
+  if (q.exhibit) h += q.exhibit;
+  return h;
+}
+
+function renderQuestion() {
+  const q = current();
+  S.answered = false; S.qStart = Date.now();
+  renderPips();
+  const st = $("#stage");
+  if (q.type === "mcq") {
+    if (q.shuffle && !q._shuf) {
+      const order = shuffle(q.options.map((_, i) => i));
+      q.options = order.map(i => q.options[i]); q.answer = order.indexOf(q.answer); q._shuf = true;
+    }
+    st.innerHTML = `${contextBlock(q)}
+      <div class="${q.big ? "lingo-q" : "qtitle"}">${q.big ? esc(q.title) : q.title}</div>
+      <div class="opts">${q.options.map((o, i) => `<button class="opt" type="button" data-i="${i}"><span class="k">${i + 1}</span><span>${esc(o)}</span></button>`).join("")}</div>
+      <div id="fbslot"></div>`;
+    st.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => answerMCQ(+b.dataset.i)));
+  } else if (q.type === "num") {
+    st.innerHTML = `${contextBlock(q)}
+      <div class="${q.sprint ? "sprint-q" : "qtitle"}">${esc(q.title)}</div>
+      <form class="numrow" id="numForm" autocomplete="off">
+        <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m"}" aria-label="Your answer">
+        <button class="btn primary" type="submit">Submit</button>
+      </form>
+      ${q.sprint ? `<div class="flash" id="flash"></div>` : `<p class="hint">Within ${Math.round(q.tol * 100)}% counts. Suffixes k / m / b work.</p>`}
+      <div id="fbslot"></div>`;
+    const inp = $("#numIn"); inp.focus();
+    $("#numForm").addEventListener("submit", e => { e.preventDefault(); answerNum(inp.value); });
+  } else if (q.type === "tap") {
+    q.sel = new Set();
+    st.innerHTML = `<span class="eyebrow">Case prompt</span>
+      <div class="qtitle">${q.title}</div>
+      <div class="snipe" id="snipe">${q.tokens.map((t, i) => `<button type="button" class="word" data-i="${i}">${esc(t.w)}</button>`).join(" ")}</div>
+      <div class="nextrow"><span class="hint" id="selCount">0 words highlighted</span><button class="btn primary" type="button" id="lockBtn">Lock in</button></div>
+      <div id="fbslot"></div>`;
+    st.querySelectorAll(".word").forEach(b => b.addEventListener("click", () => {
+      if (S.answered) return;
+      const i = +b.dataset.i; q.sel.has(i) ? q.sel.delete(i) : q.sel.add(i); b.classList.toggle("on");
+      $("#selCount").textContent = `${q.sel.size} word${q.sel.size === 1 ? "" : "s"} highlighted`;
+    }));
+    $("#lockBtn").addEventListener("click", answerTap);
+  } else if (q.type === "text") {
+    st.innerHTML = `${contextBlock(q)}
+      <div class="qtitle">${q.title}</div>
+      <p class="hint">Verdict → two reasons with numbers → risk and next step. Aim for under 60 seconds and 75 words.</p>
+      <textarea class="close-in" id="closeIn" placeholder="The client should…" aria-label="Your recommendation"></textarea>
+      <div class="meter" id="meter"><span>Sentences <b>0</b></span><span>Words <b>0</b></span><span>Time <b>0s</b></span></div>
+      <div class="nextrow"><span class="hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to submit</span><button class="btn primary" type="button" id="closeBtn">Submit close</button></div>
+      <div id="fbslot"></div>`;
+    const ta = $("#closeIn"); ta.focus();
+    const upd = () => {
+      if (S.answered) return;
+      const ss = sentences(ta.value).length, wc = ta.value.trim().split(/\s+/).filter(Boolean).length, sec = Math.round((Date.now() - S.qStart) / 1000);
+      $("#meter").innerHTML = `<span class="${ss > 3 ? "over" : ""}">Sentences <b>${ss}</b>/3</span><span class="${wc > 75 ? "over" : ""}">Words <b>${wc}</b></span><span class="${sec > 60 ? "over" : ""}">Time <b>${sec}s</b></span>`;
+    };
+    ta.addEventListener("input", upd);
+    S.meterTimer = setInterval(upd, 1000);
+    ta.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); answerText(); } });
+    $("#closeBtn").addEventListener("click", answerText);
+  }
+}
+
+function quipFor(ok) { return pick(ok >= .9 ? QUIPS.great : ok >= .7 ? QUIPS.good : ok >= .4 ? QUIPS.meh : QUIPS.bad); }
+
+function showFeedback(ok, body, autoMs) {
+  const slot = $("#fbslot");
+  const verdicts = ok >= .75 ? ["Nailed it", "Crisp", "Partner-ready", "Clean", "Yes"] : ok >= .4 ? ["Partly there", "Close", "Half credit"] : ["Not quite", "Miss", "Let's fix that"];
+  slot.innerHTML = `<div class="fb ${ok >= .75 ? "ok" : "no"}"><span class="verdict">${pick(verdicts)}</span>${body}</div>
+    <div class="nextrow" style="margin-top:10px"><button class="btn primary" type="button" id="nextBtn">${S.idx + 1 >= S.queue.length ? "See results" : "Next"} <kbd style="background:transparent;color:inherit;border-color:currentColor">Enter</kbd></button></div>`;
+  $("#nextBtn").addEventListener("click", next);
+  $("#nextBtn").focus({ preventScroll: true });
+  slot.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+}
+
+function answerMCQ(i) {
+  if (S.answered) return; S.answered = true;
+  const q = current(), ok = i === q.answer;
+  const r = record(ok ? 1 : 0);
+  $("#stage").querySelectorAll(".opt").forEach((b, j) => { b.disabled = true; if (j === q.answer) b.classList.add("right"); else if (j === i) b.classList.add("wrong"); });
+  if (q.sprint) { const me = S; setTimeout(() => { if (S === me) next(); }, ok ? 380 : 1500); return; }
+  const slow = r.ms > SKILLS[q.skill].target ? ` <span class="muted">(${(r.ms / 1000).toFixed(0)}s, target ${(SKILLS[q.skill].target / 1000).toFixed(0)}s)</span>` : "";
+  showFeedback(ok ? 1 : 0, `<div>${q.explain}</div><span class="quip">+${r.gained} XP${slow}</span>`);
+}
+
+function answerNum(v) {
+  if (S.answered) return;
+  const q = current();
+  let x = parseNum(v);
+  if (isNaN(x)) { const f = $("#flash") || $("#fbslot"); f.className = f.id === "flash" ? "flash no" : ""; f.innerHTML = `<p class="hint" style="color:var(--bad)">Type a number, like 2.4m or 15%.</p>`; return; }
+  S.answered = true;
+  // Accept "12" for 12% and money answers given in $M if user typed a bare small number
+  const target = q.answer;
+  const near = (a) => Math.abs(a - target) <= Math.max(Math.abs(target) * q.tol, q.abs || 0);
+  let ok = near(x);
+  if (!ok && !/[kmbt%]/i.test(v) && Math.abs(target) >= 1e5) ok = [1e3, 1e6, 1e9].some(m => near(x * m));
+  const r = record(ok ? 1 : 0);
+  const shown = q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
+  if (q.sprint) {
+    const f = $("#flash"); f.className = "flash " + (ok ? "ok" : "no");
+    f.textContent = ok ? `✓ ${shown}` : `✗ ${shown}`;
+    $("#numIn").disabled = true;
+    const me = S; setTimeout(() => { if (S === me) next(); }, ok ? 420 : 1600); return;
+  }
+  $("#numIn").disabled = true;
+  showFeedback(ok ? 1 : 0, `<div>Answer: <b class="num">${shown}</b>. You said <span class="num">${esc(v)}</span>.</div>
+    ${q.steps ? `<ul>${q.steps.map(s => `<li class="num" style="font-family:var(--body)">${esc(s)}</li>`).join("")}</ul>` : ""}
+    <span class="quip">+${r.gained} XP · ${(r.ms / 1000).toFixed(0)}s (partner pace: ${(SKILLS[q.skill].target / 1000).toFixed(0)}s)</span>`);
+}
+
+function answerTap() {
+  if (S.answered) return; S.answered = true;
+  const q = current();
+  const hitCons = new Set(); let fp = 0;
+  q.sel.forEach(i => { const c = q.tokens[i].c; if (c >= 0) hitCons.add(c); else fp++; });
+  const recall = hitCons.size / q.cons.length;
+  const precision = q.sel.size ? (q.sel.size - fp) / q.sel.size : 0;
+  const okv = clamp(recall - fp * 0.08, 0, 1);
+  const r = record(okv);
+  S.items[S.items.length - 1].tap = 1;
+  $("#snipe").querySelectorAll(".word").forEach((b, i) => {
+    const t = q.tokens[i]; b.disabled = true; b.classList.remove("on");
+    if (t.c >= 0) b.classList.add(hitCons.has(t.c) ? "hit" : "miss");
+    else if (q.sel.has(i)) b.classList.add("fp");
+  });
+  $("#lockBtn").disabled = true;
+  const why = q.cons.map((c, i) => `<div><b>${esc(c.phrase)}</b><span>${hitCons.has(i) ? "✓" : "<span style='color:var(--bad)'>missed</span>"} · ${esc(c.why)}</span></div>`).join("");
+  showFeedback(okv, `<div>Caught <b class="num">${hitCons.size}/${q.cons.length}</b> constraints${fp ? `, with <b class="num">${fp}</b> word${fp > 1 ? "s" : ""} that don't change the framework` : ""}.</div>
+    <div class="why">${why}</div><span class="quip">+${r.gained} XP · ${quipFor(okv)}</span>`);
+}
+
+function answerText() {
+  if (S.answered) return;
+  const q = current(), v = $("#closeIn").value;
+  if (v.trim().split(/\s+/).length < 8) { $("#meter").insertAdjacentHTML("beforeend", `<span class="over">Write at least one full sentence first.</span>`); return; }
+  S.answered = true; clearInterval(S.meterTimer);
+  const g = gradeClose(v);
+  const r = record(g.score / 5, { score: g.score });
+  $("#closeIn").disabled = true;
+  const list = g.checks.map(c => `<li><span class="m ${c.ok ? "y" : "n"}">${c.ok ? "✓" : c.partial ? "~" : "✗"}</span><span>${c.label}${c.label.startsWith("Exactly") ? ` <span class="muted">(you wrote ${g.ss.length})</span>` : ""}</span></li>`).join("")
+    + (g.hedges.length ? `<li><span class="m n">−1</span><span>Hedging: ${g.hedges.map(h => `"${esc(h)}"`).join(", ")}</span></li>` : "")
+    + (g.words > 90 ? `<li><span class="m n">−1</span><span>${g.words} words; a partner stops listening around 75</span></li>` : "");
+  showFeedback(g.score / 5, `<div><b class="num">${g.score}/5</b> on the close rubric · ${(r.ms / 1000).toFixed(0)}s · ${g.words} words</div>
+    <ul class="rubric">${list}</ul>
+    <div class="model"><span class="eyebrow">Model close</span><p>${esc(q.model)}</p></div>
+    <span class="quip">+${r.gained} XP · ${quipFor(g.score / 5)}</span>`);
+}
+
+/* ============================================================
+   Results
+   ============================================================ */
+async function finish() {
+  clearInterval(timerId); clearInterval(S && S.meterTimer);
+  if (!S) return;
+  const s = S; S = null; screen = "results";
+  if (!s.items.length) return renderHome();
+  const before = totals().xp;
+  const rec = { id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ts: Date.now(), mode: s.mode, items: s.items, xp: s.xp, bestCombo: s.bestCombo };
+  const prev = Store.recs.filter(r => r.mode === s.mode).slice(-1)[0];
+  Store.add(rec);
+  const acc = s.items.reduce((a, b) => a + b.ok, 0) / s.items.length;
+  const avgMs = s.items.reduce((a, b) => a + b.ms, 0) / s.items.length;
+  const prevAcc = prev ? prev.items.reduce((a, b) => a + b.ok, 0) / prev.items.length : null;
+  const r0 = rankFor(before), r1 = rankFor(before + s.xp);
+  const correctN = s.items.filter(i => i.ok >= .75).length;
+  const delta = prevAcc == null ? `<span class="muted">first run</span>` : acc - prevAcc >= 0 ? `<span class="delta-up">▲ ${pct(acc - prevAcc)}</span>` : `<span class="delta-dn">▼ ${pct(prevAcc - acc)}</span>`;
+  const bySkill = {};
+  s.items.forEach(i => { (bySkill[i.s] = bySkill[i.s] || []).push(i); });
+  const review = Object.keys(bySkill).map(k => {
+    const a = bySkill[k], ac = a.reduce((x, y) => x + y.ok, 0) / a.length, ms = a.reduce((x, y) => x + y.ms, 0) / a.length;
+    return `<div><span class="pill ${ac >= .85 ? "mast" : ac >= .6 ? "prog" : "work"}">${pct(ac)}</span><span><b>${SKILLS[k].name}</b> · ${a.length} item${a.length > 1 ? "s" : ""} · avg ${(ms / 1000).toFixed(1)}s vs ${(SKILLS[k].target / 1000).toFixed(0)}s target</span></div>`;
+  }).join("");
+  const sprintLine = s.sprint ? `<p><b class="num">${correctN}</b> correct in ${s.sprint} seconds${prev ? ` · last time <b class="num">${prev.items.filter(i => i.ok >= .75).length}</b>` : ""}.</p>` : "";
+  $("#view").innerHTML = `
+  <div class="wrap">
+    <section class="card results">
+      <span class="eyebrow">${MODES[s.mode].name} · debrief</span>
+      <h2 style="font-size:1.8rem">${acc >= .9 ? "Partner-ready." : acc >= .7 ? "Strong work." : acc >= .45 ? "Getting there." : "Tough room."}</h2>
+      <p class="muted" style="font-style:italic">${quipFor(acc)}</p>
+      ${r1.i > r0.i ? `<div class="rankup">Promoted to ${r1.name}.</div>` : ""}
+      ${sprintLine}
+      <div class="big">
+        <div><b>${pct(acc)}</b><span>accuracy ${delta}</span></div>
+        <div><b>${(avgMs / 1000).toFixed(1)}s</b><span>avg per item</span></div>
+        <div><b>+${s.xp}</b><span>XP earned</span></div>
+        <div><b>×${s.bestCombo}</b><span>best combo</span></div>
+      </div>
+      <div class="review">${review}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" type="button" id="againBtn">Run it back <kbd style="background:transparent;color:inherit;border-color:currentColor">Enter</kbd></button>
+        <button class="btn" type="button" id="homeBtn2">Back to dashboard</button>
+      </div>
+    </section>
+  </div>`;
+  $("#againBtn").addEventListener("click", () => startSession(s.mode));
+  $("#homeBtn2").addEventListener("click", renderHome);
+  $("#againBtn").focus({ preventScroll: true });
+  if (acc >= .8 || r1.i > r0.i) confetti();
+  scrollTo(0, 0);
+}
+
+function confetti() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = $("#confetti"), ctx = c.getContext("2d");
+  c.width = innerWidth; c.height = innerHeight;
+  const cs = getComputedStyle(document.documentElement);
+  const cols = ["--accent", "--hl", "--good"].map(v => cs.getPropertyValue(v).trim());
+  const P = Array.from({ length: 120 }, () => ({ x: rnd(0, c.width), y: rnd(-c.height * .5, 0), vx: rnd(-1.5, 1.5), vy: rnd(2, 5), r: rnd(0, 6.28), vr: rnd(-.2, .2), w: rnd(6, 11), h: rnd(3, 6), col: pick(cols) }));
+  let f = 0;
+  (function loop() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    P.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); });
+    if (++f < 150) requestAnimationFrame(loop); else ctx.clearRect(0, 0, c.width, c.height);
+  })();
+}
+
+/* ============================================================
+   Keyboard + boot
+   ============================================================ */
+document.addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (!S) {
+    if (tag === "textarea" || tag === "input") return;
+    if (e.key === "d" || e.key === "D") { if ($("[data-mode='daily']")) startSession("daily"); }
+    if (e.key === "Enter" && $("#againBtn") && document.activeElement !== $("#homeBtn2")) { e.preventDefault(); $("#againBtn").click(); }
+    return;
+  }
+  if (e.key === "Escape") { S.items.length ? finish() : renderHome(); return; }
+  const q = current();
+  if (!q) return;
+  if (S.answered && e.key === "Enter" && $("#nextBtn")) { e.preventDefault(); next(); return; }
+  if (!S.answered && q.type === "mcq" && /^[1-9]$/.test(e.key) && tag !== "textarea" && tag !== "input") {
+    const i = +e.key - 1; if (i < q.options.length) answerMCQ(i);
+  }
+  if (!S.answered && q.type === "tap" && e.key === "Enter" && tag !== "button") { e.preventDefault(); answerTap(); }
+});
+$("#homeBtn").addEventListener("click", () => { if (S && S.items.length) finish(); else renderHome(); });
+
+Store.load();
+renderHome();
+Store.connect();
+</script>
