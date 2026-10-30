@@ -304,6 +304,18 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .boss.heal { animation: pop .35s ease; }
 @media (prefers-reduced-motion: reduce) { .fuse i { animation: none !important; } }
 
+/* close breakdown */
+.roles { display: grid; gap: 6px; }
+.role { display: grid; grid-template-columns: 8.5rem 1fr; gap: 10px; font-size: .9rem; padding: 6px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+.role.bad { border-color: var(--bad); background: var(--bad-soft); }
+.rtag { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+.role.bad .rtag { color: var(--bad); }
+@media (max-width: 520px) { .role { grid-template-columns: 1fr; gap: 2px; } }
+
+.quitbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--bad); background: var(--bad-soft); font-size: .9rem; }
+.quitbar .qb { display: flex; gap: 8px; }
+.backup[hidden] { display: none; }
+
 @media (max-width: 680px) {
   .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
@@ -517,78 +529,93 @@ function genPQVF() {
   return genPQVF();
 }
 
-function bridgeHTML(eff, labels, total) {
+function bridgeHTML(eff, labels, total, hideValues) {
   const max = Math.max(...Object.values(eff).map(Math.abs), 0.1);
   const rows = Object.keys(eff).map(k => {
     const v = eff[k], w = Math.abs(v) / max * 50;
     const style = v < 0 ? `right:50%;width:${w}%` : `left:50%;width:${w}%`;
-    return `<div class="brow"><span>${esc(labels[k])}</span><div class="btrack"><span class="bbar ${v < 0 ? "neg" : "pos"}" style="${style}" title="${esc(labels[k])}: ${mUSD(v)}"></span></div><span class="v">${v >= 0 ? "+" : ""}${mUSD(v)}</span></div>`;
+    return `<div class="brow"><span>${esc(labels[k])}</span><div class="btrack"><span class="bbar ${v < 0 ? "neg" : "pos"}" style="${style}"${hideValues ? "" : ` title="${esc(labels[k])}: ${mUSD(v)}"`}></span></div><span class="v">${hideValues ? "" : (v >= 0 ? "+" : "") + mUSD(v)}</span></div>`;
   }).join("");
-  return `<div class="bridge" role="table" aria-label="Profit bridge">${rows}<div class="brow"><b>Total change</b><span></span><b class="v">${mUSD(total)}</b></div></div>`;
+  return `<div class="bridge" role="table" aria-label="Profit bridge">${rows}${hideValues ? "" : `<div class="brow"><b>Total change</b><span></span><b class="v">${mUSD(total)}</b></div>`}</div>`;
 }
 
-function pqvfDecimals(x) { return x >= 1000 ? 0 : x >= 80 ? 0 : 2; }
+// Keep generated options apart: drop any candidate within `gap` (relative) of one already kept.
+function spreadOptions(cands, ref, gap, fmt) {
+  const kept = [];
+  for (const c of cands) {
+    if (!isFinite(c.v)) continue;
+    if (kept.some(k => Math.abs(k.v - c.v) < Math.abs(ref) * gap || fmt(k.v) === fmt(c.v))) continue;
+    kept.push(c);
+  }
+  return kept;
+}
+
+function pqvfDecimals(x) { return x >= 80 ? 0 : 2; }
 function metricRoundPQVF() {
   const g = genPQVF();
   const { ind, main } = g;
   const d = pqvfDecimals(g.P1);
+  const money0 = x => "$" + x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
   const exhibit = `<div class="exhibit"><span class="cap">Exhibit · ${esc(g.ind.co)}, ${esc(g.ind.what)}</span>
     <div class="ex-wrap"><table class="ex"><thead><tr><th></th><th>FY2024</th><th>FY2025</th></tr></thead><tbody>
     <tr><td>Units (${esc(ind.unit)}, K)</td><td>${g.Q1.toLocaleString("en-US")}</td><td>${g.Q2.toLocaleString("en-US")}</td></tr>
-    <tr><td>Avg price per unit</td><td>$${g.P1.toFixed(d)}</td><td>$${g.P2.toFixed(d)}</td></tr>
-    <tr><td>Variable cost per unit</td><td>$${g.V1.toFixed(d)}</td><td>$${g.V2.toFixed(d)}</td></tr>
+    <tr><td>Avg price per unit</td><td>${money0(g.P1)}</td><td>${money0(g.P2)}</td></tr>
+    <tr><td>Variable cost per unit</td><td>${money0(g.V1)}</td><td>${money0(g.V2)}</td></tr>
     <tr><td>Fixed costs</td><td>${mUSD(g.F1)}</td><td>${mUSD(g.F2)}</td></tr>
     <tr class="total"><td>Operating profit</td><td>${mUSD(g.pr1)}</td><td>${mUSD(g.pr2)}</td></tr>
     </tbody></table></div></div>`;
   const dP = g.pr2 - g.pr1, dPct = dP / g.pr1;
   const labels = { volume: "Volume", price: "Price", varcost: "Var. cost/unit", fixed: "Fixed costs" };
-  const bridge = bridgeHTML(g.eff, labels, dP);
   const share = g.eff[main] / dP;
+  const over = share > 1.05;
+  const offsets = Object.keys(g.eff).filter(k => g.eff[k] > 0.05).map(k => labels[k].toLowerCase());
+  const overNote = over ? ` That is more than the whole drop because ${offsets.length ? offsets.join(" and ") + " partly offset it" : "other lines partly offset it"}.` : "";
+  const sharePhrase = over ? `more than all of it (about ${Math.round(share * 20) * 5}%)` : `roughly ${Math.round(share * 20) * 5}% of it`;
+  const sizePct = g.pr2 > 0 ? `, ${pct(-dPct, 1)}` : `, taking it below zero`;
 
   const keys = shuffle(Object.keys(DRIVERS));
   const q1 = {
     skill: "metric", type: "mcq", exhibit,
     title: `Operating profit fell from ${mUSD(g.pr1)} to ${mUSD(g.pr2)}. Which line explains most of the drop?`,
     options: keys.map(k => DRIVERS[k].label), answer: keys.indexOf(main),
-    explain: `Isolate each driver while holding the others constant. ${DRIVERS[main].label} accounts for ${mUSD(g.eff[main])} of the ${mUSD(dP)} change (${pct(share)}).${bridge}`
+    explain: `${DRIVERS[main].label} moved profit the most. Hold the other lines constant and compare each driver's effect on profit; the bars show relative size. You'll size it on the next question.${bridgeHTML(g.eff, labels, dP, true)}`
   };
 
-  const correct = g.eff[main];
-  let trap;
-  if (main === "volume") trap = (g.Q2 - g.Q1) * g.P1 / 1000;           // revenue, not contribution
-  else if (main === "price") trap = (g.P2 - g.P1) * g.Q1 / 1000 * 0.5;
-  else if (main === "varcost") trap = -(g.V2 - g.V1) * g.Q1 / 1000 * 1.9;
-  else trap = -(g.F2 - g.F1) * 2;
-  const cand = [correct, trap, correct * .45, correct * 1.7];
-  const seen = new Set(); const mopts = [];
-  for (const c of cand) { const s = mUSD(c); if (!seen.has(s)) { seen.add(s); mopts.push({ s, ok: c === correct }); } }
-  while (mopts.length < 4) { const s = mUSD(correct * rnd(2, 2.6)); if (!seen.has(s)) { seen.add(s); mopts.push({ s, ok: false }); } }
-  const ms = shuffle(mopts);
+  const c = g.eff[main];
+  const traps = {
+    volume: { v: (g.Q2 - g.Q1) * g.P1 / 1000, why: `Multiplying the unit change by price (${mUSD((g.Q2 - g.Q1) * g.P1 / 1000)}) gives the revenue loss, not the profit loss.` },
+    price: { v: g.rev2 - g.rev1, why: `The total revenue change (${mUSD(g.rev2 - g.rev1)}) mixes the price effect with volume.` },
+    varcost: { v: -(g.V2 * g.Q2 - g.V1 * g.Q1) / 1000, why: `The change in total variable cost (${mUSD(-(g.V2 * g.Q2 - g.V1 * g.Q1) / 1000)}) mixes the unit-cost effect with volume.` },
+    fixed: { v: dP, why: `The total profit change (${mUSD(dP)}) also includes the smaller moves in price, volume and unit cost.` },
+  };
+  const opts = spreadOptions([{ v: c, ok: true }, { v: traps[main].v }, { v: dP }, { v: -c }, { v: c * 1.6 }, { v: c * 0.55 }, { v: c * 2.2 }], c, .08, mUSD).slice(0, 4);
+  const ms = shuffle(opts);
   const howCalc = {
-    volume: `ΔUnits × prior unit contribution = (${g.Q2.toLocaleString()}K − ${g.Q1.toLocaleString()}K) × ($${g.P1.toFixed(d)} − $${g.V1.toFixed(d)}) ≈ ${mUSD(correct)}. Multiplying by price instead gives the revenue loss (${mUSD(trap)}), not the profit loss.`,
-    price: `ΔPrice × current units = ($${g.P2.toFixed(d)} − $${g.P1.toFixed(d)}) × ${g.Q2.toLocaleString()}K ≈ ${mUSD(correct)}. Every dollar of price falls straight to profit.`,
-    varcost: `−ΔUnit cost × current units = −($${g.V2.toFixed(d)} − $${g.V1.toFixed(d)}) × ${g.Q2.toLocaleString()}K ≈ ${mUSD(correct)}.`,
-    fixed: `Fixed costs rose from ${mUSD(g.F1)} to ${mUSD(g.F2)}, a ${mUSD(correct)} hit to profit, one for one.`,
+    volume: `ΔUnits × prior unit contribution = (${g.Q2.toLocaleString()}K − ${g.Q1.toLocaleString()}K) × (${money0(g.P1)} − ${money0(g.V1)}) ≈ ${mUSD(c)}.`,
+    price: `ΔPrice × current units = (${money0(g.P2)} − ${money0(g.P1)}) × ${g.Q2.toLocaleString()}K ≈ ${mUSD(c)}. Every dollar of price falls straight to profit.`,
+    varcost: `−ΔUnit cost × current units = −(${money0(g.V2)} − ${money0(g.V1)}) × ${g.Q2.toLocaleString()}K ≈ ${mUSD(c)}.`,
+    fixed: `Fixed costs rose from ${mUSD(g.F1)} to ${mUSD(g.F2)}, a ${mUSD(c)} hit to profit, one for one.`,
   }[main];
   const q2 = {
     skill: "metric", type: "mcq", exhibit,
     title: `Quantify it. What is the profit impact of the ${DRIVERS[main].label.toLowerCase()} change?`,
-    options: ms.map(o => o.s), answer: ms.findIndex(o => o.ok), explain: howCalc
+    options: ms.map(o => mUSD(o.v)), answer: ms.findIndex(o => o.ok),
+    explain: `${howCalc} ${traps[main].why} That driver explains ${pct(share)} of the ${mUSD(dP)} change.${overNote}${bridgeHTML(g.eff, labels, dP)}`
   };
 
   const wrong = pick(Object.keys(DRIVERS).filter(k => k !== main));
   const lines = [
-    { ok: true, t: `"Profit is down ${mUSD(-dP)}, about ${pct(-dPct)}, and roughly ${Math.round(share * 10) * 10}% of that comes from ${DRIVERS[main].phrase}. Before asking why, I'd ${DRIVERS[main].dig}."` },
-    { ok: false, t: `"My hypothesis is that new competitors are taking customers, so I'd start by mapping the competitive landscape and their value propositions."` },
-    { ok: false, t: `"I'd structure this into revenue, costs, market, and competition, and work through each bucket in turn."` },
-    { ok: false, t: `"Profit is down ${mUSD(-dP)}, mostly because of ${DRIVERS[wrong].phrase}, so I'd dig into what's driving that first."` },
+    { ok: true, t: `"Profit is down ${mUSD(-dP)}${sizePct}, and ${sharePhrase} comes from ${DRIVERS[main].phrase}. Before asking why, I'd ${DRIVERS[main].dig}."` },
+    { ok: false, t: `"Profit is down ${mUSD(-dP)}${sizePct}, and ${sharePhrase} comes from ${DRIVERS[wrong].phrase}. Before asking why, I'd ${DRIVERS[wrong].dig}."` },
+    { ok: false, t: `"Profit is down ${mUSD(-dP)}, about ${pct(-dP / g.rev1, 1)}, and ${sharePhrase} comes from ${DRIVERS[main].phrase}. Before asking why, I'd ${DRIVERS[main].dig}."` },
+    { ok: false, t: `"Profit is down ${mUSD(-dP)}${sizePct}, mostly from ${DRIVERS[main].phrase}, which is most likely new competitors undercutting us, so I'd map their pricing and positioning next."` },
   ];
   const ls = shuffle(lines);
   const q3 = {
     skill: "metric", type: "mcq", exhibit,
     title: `Interviewer: "So, what's going on here?" Pick your opening line.`,
     options: ls.map(l => l.t), answer: ls.findIndex(l => l.ok),
-    explain: `The winning line states the size of the problem, attributes it to one driver with a share, and only then moves to "why." Jumping to competitors or reciting buckets skips the number the interviewer is waiting for.`
+    explain: `The winning line sizes the drop against profit, credits the right driver with its share, and decomposes before hypothesizing. The near-misses: one credits ${DRIVERS[wrong].phrase}; one states the % against revenue (${pct(-dP / g.rev1, 1)}) instead of profit${g.pr2 > 0 ? ` (${pct(-dPct, 1)})` : ""}; one has the right driver but jumps straight to competitors with nothing behind it.`
   };
   return [q1, q2, q3];
 }
@@ -602,8 +629,8 @@ const SEG_SETS = [
 ];
 const SEG_DIG = {
   "Region": "split it into subscribers versus revenue per subscriber in that region",
-  "Channel": "split that channel into store count, traffic, and basket size",
-  "Product": "split it into balances or volume versus yield or price",
+  "Channel": "split that channel into outlets or visits, conversion, and basket size",
+  "Product": "split it into volume or balances versus price or yield",
   "Country": "split it into store traffic, conversion, and average ticket",
 };
 function metricRoundMix() {
@@ -619,33 +646,36 @@ function metricRoundMix() {
       <div class="ex-wrap"><table class="ex"><thead><tr><th>${esc(s.dim)}</th><th>FY2024</th><th>FY2025</th></tr></thead><tbody>
       ${s.segs.map((sg, i) => `<tr><td>${esc(sg)}</td><td>${base[i].toFixed(0)}</td><td>${nxt[i].toFixed(0)}</td></tr>`).join("")}
       <tr class="total"><td>Total</td><td>${tot1.toFixed(0)}</td><td>${tot2.toFixed(0)}</td></tr></tbody></table></div></div>`;
-    const share = d[hit] / dT;
+    const lineLc = s.line.toLowerCase();
+    const dropPct = pct(-dT / tot1, 1);
     const order = shuffle([0, 1, 2, 3]);
     const q1 = {
       skill: "metric", type: "mcq", exhibit,
-      title: `${s.line} fell ${pct(-dT / tot1)}. Which ${s.dim.toLowerCase()} drives it?`,
+      title: `${s.line} fell ${dropPct}. Which ${s.dim.toLowerCase()} drives it?`,
       options: order.map(i => s.segs[i]), answer: order.indexOf(hit),
-      explain: `${s.segs[hit]} went from $${base[hit]}M to $${nxt[hit]}M (${mUSD(d[hit], 0)}), against a total change of ${mUSD(dT, 0)}. Scan the deltas, not the levels: the biggest segment is not always the one that moved.`
+      explain: `${s.segs[hit]} had by far the largest decline. Scan the change in each row, not the levels: the biggest ${s.dim.toLowerCase()} is not always the one that moved. You'll size its share next.`
     };
-    const corr = Math.round(share * 100);
-    const choices = shuffle([...new Set([corr, Math.round(-d[hit] / tot1 * 100), Math.round(corr * .6), Math.min(99, Math.round(corr * 1.3) + 3)])].slice(0, 4));
-    while (choices.length < 4) choices.push(corr + 7 * choices.length);
+    const corr = Math.round(d[hit] / dT * 100), wrongDen = Math.round(-d[hit] / tot1 * 100);
+    const cands = spreadOptions([{ v: corr, ok: true }, { v: wrongDen }, { v: corr - 15 }, { v: corr + 12 }, { v: corr - 27 }, { v: corr + 24 }].filter(c => c.v > 0), 100, .08, x => x + "%").slice(0, 4);
+    const cs = shuffle(cands);
     const q2 = {
       skill: "metric", type: "mcq", exhibit,
       title: `What share of the total ${mUSD(dT, 0)} decline does ${s.segs[hit]} explain?`,
-      options: choices.map(c => c + "%"), answer: choices.indexOf(corr),
-      explain: `${mUSD(d[hit], 0)} ÷ ${mUSD(dT, 0)} ≈ ${corr}%. It can exceed 100% when other segments grew. A common slip is dividing by total revenue (${Math.round(-d[hit] / tot1 * 100)}%), which answers a different question.`
+      options: cs.map(c => c.v + "%"), answer: cs.findIndex(c => c.ok),
+      explain: `${s.segs[hit]} went from $${base[hit]}M to $${nxt[hit]}M (${mUSD(d[hit], 0)}). ${mUSD(d[hit], 0)} ÷ ${mUSD(dT, 0)} ≈ ${corr}%.${corr > 100 ? " It exceeds 100% because the other rows grew a little." : ""} A common slip is dividing by total ${lineLc} (${wrongDen}%), which answers a different question.`
     };
+    const other = order.filter(i => i !== hit).sort((a, b) => base[b] - base[a])[0];
+    const head = `"${s.line} is down ${mUSD(-dT, 0)}, about ${dropPct}, and`;
     const lines = shuffle([
-      { ok: true, t: `"${s.line} is down ${mUSD(-dT, 0)}, about ${pct(-dT / tot1)}, and ${s.segs[hit]} explains roughly ${corr}% of it. I'd ${SEG_DIG[s.dim]} before forming a hypothesis."` },
-      { ok: false, t: `"It sounds like a market-wide slowdown. I'd look at macro trends and customer sentiment first."` },
-      { ok: false, t: `"${s.segs[hit]} is clearly the problem, probably because of a new competitor. Can we talk about their strategy?"` },
-      { ok: false, t: `"I'd like to understand the company's history, products, and customers before looking at the numbers."` },
+      { ok: true, t: `${head} ${s.segs[hit]} explains roughly ${corr}% of it. I'd ${SEG_DIG[s.dim]} before forming a hypothesis."` },
+      { ok: false, t: `${head} ${s.segs[other]} explains roughly ${corr}% of it. I'd ${SEG_DIG[s.dim]} before forming a hypothesis."` },
+      { ok: false, t: `${head} ${s.segs[hit]} explains roughly ${wrongDen}% of it. I'd ${SEG_DIG[s.dim]} before forming a hypothesis."` },
+      { ok: false, t: `${head} ${s.segs[hit]} explains roughly ${corr}% of it, most likely because a competitor entered, so I'd study their pricing next."` },
     ]);
     const q3 = {
       skill: "metric", type: "mcq", exhibit,
       title: `Pick your next sentence to the interviewer.`, options: lines.map(l => l.t), answer: lines.findIndex(l => l.ok),
-      explain: `Size it, locate it, decompose it, and only then hypothesize. The third option names the right segment but jumps to a cause with no number behind it.`
+      explain: `Size it, locate it, decompose it, and only then hypothesize. The near-misses: one credits ${s.segs[other]}, the largest ${s.dim.toLowerCase()} but not the one that moved; one uses the share of total ${lineLc} (${wrongDen}%) instead of the share of the decline; one gets the numbers right but jumps to a competitor with nothing behind it.`
     };
     return [q1, q2, q3];
   }
@@ -657,31 +687,69 @@ const metricRound = () => (Math.random() < .62 ? metricRoundPQVF() : metricRound
    CONTENT: Prompt Sniper
    [[phrase|why]] marks a constraint
    ============================================================ */
+// q.a is the right answer; q.d are wrong answers that are real framework questions
+// for a DIFFERENT constraint in the same prompt, written to a similar length.
 const PROMPTS = [
   { t: "Your client is a [[mid-sized|Scale limits: can't outspend national players on tech or marketing]] [[European|ECB rate environment, PSD2/open banking, EU capital rules]] [[regional|Local deposit base and branch network; geographic concentration risk]] bank whose [[net interest income|Revenue lens is NII: split into NIM versus balance volume]] fell 15% in two years while [[digital-only competitors|Deposit-rate competition from neobanks; switching costs are low]] grew deposits. Should it launch a mobile-first brand?",
-    q: { title: "Which framework branch does \"regional\" force you to add?", options: ["Local deposit concentration and branch-cost leverage versus national players", "Global expansion options into Asia", "A generic market-size estimate for banking", "Brand awareness among Gen Z worldwide"], answer: 0, explain: "A regional bank's moat and its exposure are both local: deposit concentration, branch density, and community relationships. Global or generic branches ignore the prompt." } },
+    q: { title: "Which framework branch does \"regional\" force you to add?",
+      a: "Deposit concentration and branch costs versus national rivals",
+      d: ["Digital features and app experience versus neobank competitors", "Euro-area rate outlook and how it moves net interest margin", "Build, buy or partner options for launching the new brand"],
+      explain: "A regional bank's moat and its exposure are both local: deposit concentration, branch density, and community relationships. The other options are real branches, but they come from \"digital-only competitors\", \"European\" and the launch question." } },
   { t: "A [[Series B|Cash runway and burn multiple matter more than near-term profit]] [[fintech startup|Regulatory licensing, bank-partner dependency, interchange economics]] offering [[earned-wage access|Revenue tied to employer adoption and per-transaction fees; regulatory scrutiny]] to [[US hourly workers|Target segment: high churn, low balances, employer-mediated distribution]] wants to double revenue in [[18 months|Hard time constraint: favors scaling existing channels over new products]]. Where should it focus?",
-    q: { title: "What does \"Series B\" change about how you evaluate options?", options: ["Weigh each option's cash burn and time-to-revenue against runway", "Focus on dividend policy", "Prioritize options with the highest long-term NPV regardless of timing", "Ignore unit economics until IPO"], answer: 0, explain: "A Series B company is runway-constrained. Options that burn cash for revenue after the 18-month window are unattractive even if their NPV looks good." } },
+    q: { title: "What does \"Series B\" change about how you evaluate options?",
+      a: "Weigh each option's cash burn and time to revenue against runway",
+      d: ["Weigh each option's regulatory risk under state wage-access rules", "Weigh each option's fit with how hourly workers are paid today", "Weigh each option's long-term NPV over a ten-year horizon"],
+      explain: "A Series B company is runway-constrained, so options that burn cash before paying back are unattractive even with a good long-term NPV. Regulation and worker fit are real branches from \"earned-wage access\" and \"US hourly workers\"." } },
   { t: "Our client, a [[family-owned|Owners may prioritize control and legacy over pure value maximization]] [[Midwest|Regional freight lanes, labor market, and customer concentration]] [[industrial distributor|Thin gross margins; value is in inventory turns, fill rate, and logistics]], is considering acquiring a [[Canadian|Cross-border tariffs, FX exposure, and integration complexity]] competitor with [[higher margins|Ask why: mix, pricing power, or under-investment; check sustainability]]. Should they buy?",
-    q: { title: "Which question does \"family-owned\" add to your acquisition framework?", options: ["Are the owners willing to take on debt or dilute control to fund the deal?", "What is the target's Instagram following?", "Should the company IPO first?", "What is the global pump market size?"], answer: 0, explain: "Family owners often resist leverage or giving up equity. Financing and control preferences become a gating question before synergies." } },
+    q: { title: "Which question does \"family-owned\" add to your acquisition framework?",
+      a: "Will the owners accept new debt or diluted control to fund the deal?",
+      d: ["How much tariff and currency risk comes with Canadian operations?", "Why are the target's margins higher, and will that last after close?", "Can the combined network improve inventory turns and fill rates?"],
+      explain: "Family owners often resist leverage or giving up equity, so financing and control become a gating question before synergies. The other options belong to \"Canadian\", \"higher margins\" and \"industrial distributor\"." } },
   { t: "A [[luxury|Pricing power and brand equity; discounting destroys value]] [[Italian|Made-in-Italy positioning and European supply chain]] handbag maker saw [[sales in mainland China|Market-specific: daigou, tourism flows, local competitors, macro]] fall 20% while [[global sales held flat|Problem is localized, not brand-wide]]. What's going on?",
-    q: { title: "What does \"global sales held flat\" tell you to do first?", options: ["Treat it as a China-specific issue and decompose China sales by channel and customer type", "Redesign the global product line", "Cut prices worldwide", "Assume the brand is in structural decline"], answer: 0, explain: "Flat global sales localize the problem. Start by splitting China into channels (stores, e-commerce, travel retail) and customers (domestic versus outbound tourists)." } },
+    q: { title: "What does \"global sales held flat\" tell you to do first?",
+      a: "Treat it as China-specific: split China sales by channel and buyer",
+      d: ["Review the global product line for signs of brand fatigue", "Check whether recent price increases hurt demand in every region", "Benchmark the brand's growth against the wider global luxury market"],
+      explain: "Flat global sales localize the problem. Start by splitting China into channels (stores, e-commerce, travel retail) and customers (domestic versus outbound tourists). The other options treat it as a brand-wide issue." } },
   { t: "A [[state-owned|Objectives include public mandate and employment, not only profit]] [[Southeast Asian|Fast-growing demand; infrastructure and regulatory variation by country]] [[utility|Regulated returns; capex-heavy; tariff-setting by regulator]] wants to reach [[40% renewables by 2030|Fixed target and deadline: work backward from required capacity]]. How should it get there?",
-    q: { title: "Which framework branch matters most because the client is a \"utility\" under a regulator?", options: ["How the regulator will let it recover renewable capex through tariffs", "Its social media strategy", "Consumer brand loyalty programs", "Retail store footprint"], answer: 0, explain: "Regulated utilities earn allowed returns on approved capex. Tariff recovery decides whether the plan is financeable." } },
+    q: { title: "Which branch matters most because the client is a regulated \"utility\"?",
+      a: "How the regulator lets it recover renewable capex in tariffs",
+      d: ["How fast electricity demand in the region will grow through 2030", "How much new capacity it must add each year to reach 40%", "How government ownership shapes its employment commitments"],
+      explain: "Regulated utilities earn allowed returns on approved capex, so tariff recovery decides whether the plan is financeable. The other options come from \"Southeast Asian\", the 2030 target and \"state-owned\"." } },
   { t: "A [[private-equity-owned|Exit horizon of 3-5 years; EBITDA growth and multiple drive decisions]] [[dental clinic chain|Roll-up economics: same-clinic growth versus acquisitions; dentist retention]] in the [[Southeast US|Regional density matters for referrals, staffing, and brand]] has [[flat same-clinic revenue|Organic growth stalled; growth so far may come from acquisitions only]]. How do we restart growth?",
-    q: { title: "What does \"private-equity-owned\" add to how you prioritize levers?", options: ["Favor levers that lift EBITDA within the 3–5 year exit window", "Favor 15-year brand-building programs", "Ignore cost levers", "Prioritize the highest-revenue lever regardless of margin"], answer: 0, explain: "PE owners value EBITDA growth they can show at exit. Fast, margin-accretive levers beat slow brand plays." } },
-  { t: "A [[Japanese|Aging population, conservative consumer adoption, strong domestic incumbents]] [[convenience store|Small footprint, high traffic, fresh food and services drive margin]] operator wants to enter the [[US Sun Belt|Car-centric, fast population growth, competing with gas-station c-stores]] with [[100 stores in three years|Pace constraint: build versus buy (acquire a local chain)]].",
-    q: { title: "\"100 stores in three years\" pushes you to examine which option first?", options: ["Acquiring an existing c-store chain versus building greenfield", "Whether to sell online only", "Japanese domestic pricing", "The history of convenience stores"], answer: 0, explain: "Roughly 33 openings a year is aggressive for greenfield. The timeline makes build-versus-buy the first decision." } },
+    q: { title: "What does \"private-equity-owned\" add to how you prioritize levers?",
+      a: "Favor levers that lift EBITDA within the 3–5 year exit window",
+      d: ["Favor levers that build clinic density for referrals in the region", "Favor levers that improve dentist retention across acquired clinics", "Favor levers that maximize long-term patient lifetime value"],
+      explain: "PE owners value EBITDA they can show at exit, so fast, margin-accretive levers beat slow ones. Density and dentist retention are real branches from \"Southeast US\" and \"dental clinic chain\"; lifetime value ignores the exit clock." } },
+  { t: "A [[Japanese|Aging population, conservative consumer adoption, strong domestic incumbents]] [[convenience store|Small footprint, high traffic, fresh food and services drive margin]] operator wants to enter the [[US Sun Belt|Car-centric, fast population growth, competing with gas-station c-stores]] with [[100 stores in three years|Pace constraint: build versus buy (acquire a local chain)]]. How should it enter?",
+    q: { title: "\"100 stores in three years\" pushes you to examine which question first?",
+      a: "Whether to buy an existing c-store chain rather than build sites",
+      d: ["Whether Japanese fresh-food formats appeal to car-centric US shoppers", "Whether gas-station c-stores will respond with aggressive price cuts", "Whether Sun Belt population growth supports long-term store demand"],
+      explain: "About 33 openings a year is aggressive for greenfield, so the timeline makes build-versus-buy the first decision. The others are real questions from \"Japanese\", \"convenience store\" and \"US Sun Belt\"." } },
   { t: "A [[B2B|Buyers are procurement teams; long sales cycles; contract renewals]] [[cybersecurity SaaS|Recurring revenue: track ARR, net revenue retention, and CAC payback]] company has [[net revenue retention|Expansion minus churn from existing customers]] of 95% and wants to [[go upmarket to enterprise|Longer sales cycles, higher CAC, need for compliance certifications]]. Should it?",
-    q: { title: "Why does 95% net revenue retention matter here?", options: ["The installed base is shrinking, so fix retention before spending on costly enterprise CAC", "It means the company is growing 95% a year", "It is irrelevant to the upmarket decision", "It proves the product has no competitors"], answer: 0, explain: "Below 100% NRR, the base shrinks without new logos. Moving upmarket raises CAC, so leaky retention makes the payback worse." } },
+    q: { title: "Why does 95% net revenue retention matter here?",
+      a: "The base is shrinking, so fix retention before costly enterprise sales",
+      d: ["Enterprise buyers will require compliance certifications before signing", "Procurement-led deals mean sales cycles of six to twelve months", "ARR growth depends on adding new logos faster than competitors"],
+      explain: "Below 100% NRR the existing base shrinks every year. Moving upmarket raises CAC, so a leaky base makes the payback worse. The other options are true of enterprise SaaS but don't answer why 95% matters." } },
   { t: "A [[nonprofit|Mission metrics over profit; funding from donors and grants]] [[hospital system|Payer mix (Medicare, Medicaid, commercial) drives revenue per patient]] in [[rural Pennsylvania|Low volume, older patients, physician recruitment challenges]] is losing $20M a year. How do we close the gap?",
-    q: { title: "\"Rural\" forces which revenue question to the top?", options: ["Payer mix and patient volume: how much is Medicare/Medicaid and how many patients leave for urban centers?", "How to raise prices for commercial out-of-state tourists", "Opening a flagship in Manhattan", "Ad spend on national TV"], answer: 0, explain: "Rural hospitals often skew to government payers and lose patients to urban systems. Payer mix and outmigration size the revenue gap." } },
+    q: { title: "\"Rural\" forces which revenue question to the top?",
+      a: "How much revenue is government-paid, and how many patients leave?",
+      d: ["How much donor and grant funding could cover the annual deficit?", "How commercial rates compare with the largest regional insurers", "How physician productivity compares with national benchmarks"],
+      explain: "Rural hospitals skew to government payers and lose patients to urban systems, so payer mix and outmigration size the revenue gap. Donor funding comes from \"nonprofit\"; the others are generic hospital levers." } },
   { t: "A [[direct-to-consumer|Owns customer data; CAC on paid social is the key cost]] [[mattress|Infrequent purchase (8-10 yrs); repeat revenue is low]] brand saw [[customer acquisition cost|Unit economics: CAC versus contribution per order]] rise 60% after [[iOS privacy changes|Ad tracking loss reduces targeting efficiency on Meta]]. What should it do?",
-    q: { title: "Why does \"mattress\" matter for the CAC problem?", options: ["One purchase every ~8 years means CAC must be recovered on the first order", "Mattresses are digital goods", "It implies a subscription model", "It means CAC is irrelevant"], answer: 0, explain: "With almost no repeat purchase, lifetime value is roughly one order's contribution. A 60% CAC jump hits payback directly." } },
-  { t: "A [[low-cost|Model depends on high utilization, one aircraft type, ancillaries]] [[Latin American|Currency volatility, fuel priced in USD, regulatory differences]] airline wants to add [[transatlantic routes to Spain|Wide-body aircraft needed; competes with network carriers]].",
-    q: { title: "What tension does \"low-cost\" create with this expansion?", options: ["Long-haul needs a second aircraft type and longer turns, eroding low-cost advantages", "Low-cost carriers can't fly to Europe by law", "It means fares must be raised to luxury levels", "None; the model scales anywhere"], answer: 0, explain: "LCC economics rely on fleet commonality and quick turns. Long-haul wide-bodies break both, so ask whether unit costs survive." } },
-  { t: "A [[global|Multi-market: compare performance by region before averaging]] [[consumer packaged goods|Retailer power, trade spend, and shelf space drive margin]] company's [[private-label share|Store brands take share when price gaps widen]] gains in [[UK grocery|Discounters (Aldi, Lidl) and concentrated retailers]] are hurting its [[premium detergent|Category where performance claims justify price premium]] line.",
-    q: { title: "\"UK grocery\" points you toward which competitive force?", options: ["Discounters and concentrated retailer power pushing private label", "US antitrust law", "Chinese manufacturing costs only", "Influencer marketing on TikTok"], answer: 0, explain: "UK grocery is concentrated and discounters are growing fast. Retailer leverage explains private-label pressure better than generic competition." } },
+    q: { title: "Why does \"mattress\" matter for the CAC problem?",
+      a: "With one purchase per eight years, CAC must pay back on order one",
+      d: ["Loss of ad tracking means Meta targeting needs a new data strategy", "Owning customer data lets the brand retarget past buyers cheaply", "Generous trial periods and returns shrink contribution per order"],
+      explain: "With almost no repeat purchase, lifetime value is roughly one order's contribution, so a 60% CAC jump hits payback directly. Tracking loss and owned data come from \"iOS privacy changes\" and \"direct-to-consumer\"." } },
+  { t: "A [[low-cost|Model depends on high utilization, one aircraft type, ancillaries]] [[Latin American|Currency volatility, fuel priced in USD, regulatory differences]] airline wants to add [[transatlantic routes to Spain|Wide-body aircraft needed; competes with network carriers]]. Should it?",
+    q: { title: "What tension does \"low-cost\" create with this expansion?",
+      a: "Long-haul needs a second fleet type and slower turns, eroding the cost edge",
+      d: ["Fuel bought in dollars raises currency exposure for a Latin American carrier", "Network carriers already hold Spain routes with strong loyalty programs", "Transatlantic demand is seasonal and peaks in the European summer"],
+      explain: "Low-cost economics rely on one fleet type and quick turns. Long-haul wide-bodies break both, so ask whether unit costs survive. The others are real branches from \"Latin American\" and \"transatlantic routes\"." } },
+  { t: "A [[global|Multi-market: compare performance by region before averaging]] [[consumer packaged goods|Retailer power, trade spend, and shelf space drive margin]] company's [[premium detergent|Category where performance claims justify a price premium]] line is losing share as [[private-label|Store brands take share when price gaps widen]] grows in [[UK grocery|Discounters (Aldi, Lidl) and concentrated retailers]]. How should it respond?",
+    q: { title: "\"UK grocery\" points you toward which competitive force?",
+      a: "Discounters and big retailers giving store brands more shelf power",
+      d: ["Premium performance claims that justify paying more than store brands", "How UK share trends compare with the company's other markets", "Trade spend levels compared with the category average"],
+      explain: "UK grocery is concentrated and discounters are growing fast, so retailer leverage explains private-label pressure. The other options come from \"premium detergent\", \"global\" and \"consumer packaged goods\"." } },
 ];
 
 function parsePrompt(t) {
@@ -700,41 +768,103 @@ function sniperItems(p) {
   const { tokens, cons } = parsePrompt(p.t);
   return [
     { skill: "sniper", type: "tap", tokens, cons, title: "Highlight every descriptor that should change your framework." },
-    { skill: "sniper", type: "mcq", title: p.q.title, options: p.q.options, answer: p.q.answer, explain: p.q.explain, shuffle: true }
+    { skill: "sniper", type: "mcq", title: p.q.title, options: [p.q.a, ...p.q.d], answer: 0, explain: p.q.explain, shuffle: true }
   ];
 }
 
 /* ============================================================
    CONTENT: Bucket Sharpener
    ============================================================ */
+// Each item carries a data clue in ctx. a = the sub-bucket that fits the clue;
+// d = same-industry, equally specific sub-buckets that the clue rules out.
 const BUCKETS = [
-  { ctx: "US regional bank · profits down 18%", gen: "Competition increased", opts: ["NIM compression as fintechs and online banks bid up deposit rates", "Competitors are more aggressive", "Higher customer acquisition cost on TikTok for a DTC brand", "Lower RevPAR from new hotel supply"], a: 0 },
-  { ctx: "European budget airline · margin down", gen: "Costs went up", opts: ["Jet fuel hedges rolled off at higher prices, plus EU ETS carbon-allowance costs", "Operating expenses rose", "Higher cost of goods sold from cotton prices", "Rising interchange fees"], a: 0 },
-  { ctx: "B2B SaaS · revenue growth slowing", gen: "Customers are leaving", opts: ["Gross revenue churn in the SMB tier after the seat-price increase", "Customer satisfaction fell", "Same-store sales decline from mall traffic", "Lower load factor on regional routes"], a: 0 },
-  { ctx: "Specialty coffee chain · same-store sales down", gen: "Fewer customers", opts: ["Morning-daypart traffic down as hybrid work cut weekday commutes", "Demand fell", "Lower deposit balances from rate-seeking customers", "Fewer enterprise seat renewals"], a: 0 },
-  { ctx: "Big-box retailer · gross margin down 2 pts", gen: "Pricing pressure", opts: ["Heavier promotional markdowns to clear excess seasonal inventory", "Prices are lower", "Reimbursement cuts from Medicare", "Lower take rate on marketplace transactions"], a: 0 },
-  { ctx: "Ride-hailing marketplace · revenue flat despite more trips", gen: "Monetization issues", opts: ["Take rate compressed as driver incentives rose to fix supply shortages", "The business model is weak", "Lower ARPU from mobile data plans", "Higher shrink in grocery stores"], a: 0 },
-  { ctx: "Hospital system · operating loss", gen: "Revenue fell", opts: ["Payer mix shifted toward Medicaid, cutting revenue per admission", "Patients paid less", "Lower yield on commercial loans", "Fewer subscription upgrades"], a: 0 },
-  { ctx: "Mobile carrier · revenue down", gen: "Customers spending less", opts: ["ARPU decline as customers moved to cheaper unlimited plans from MVNOs", "Wallet share fell", "Lower RevPAR from conference cancellations", "Inventory write-downs on apparel"], a: 0 },
-  { ctx: "DTC skincare brand · profitability falling", gen: "Marketing is less effective", opts: ["Paid-social CAC up after iOS tracking changes broke lookalike targeting", "Marketing ROI is bad", "Lower NIM on mortgage book", "Higher landing fees at hub airports"], a: 0 },
-  { ctx: "Hotel chain · urban properties underperforming", gen: "Weak demand", opts: ["RevPAR down as business-travel occupancy hasn't recovered midweek", "Fewer guests", "Lower same-store sales in grocery", "Seat-license churn in enterprise"], a: 0 },
-  { ctx: "Packaged foods maker · volume down at grocers", gen: "Losing to competitors", opts: ["Private-label share gains as the price gap to store brands widened past 30%", "Competition got tougher", "Lower load factor on transatlantic routes", "Higher cloud hosting costs"], a: 0 },
-  { ctx: "Auto OEM · EV unit margins negative", gen: "Production costs high", opts: ["Battery cell costs per kWh above plan plus low plant utilization", "Factories are inefficient", "Lower deposit betas", "Rising credit card chargebacks"], a: 0 },
-  { ctx: "Insurance carrier · underwriting losses", gen: "Claims went up", opts: ["Combined ratio above 100% from severe-weather catastrophe losses in Florida homeowners", "More claims", "Lower take rate on bookings", "Higher shrink from theft"], a: 0 },
-  { ctx: "Payments startup · unit economics worsening", gen: "Costs rose", opts: ["Interchange and network fees rising faster than merchant pricing", "Expenses grew", "Fuel surcharges on long-haul freight", "Higher COGS from coffee bean prices"], a: 0 },
-  { ctx: "Grocery chain · margin erosion", gen: "Operational issues", opts: ["Fresh-food shrink up 1.5 pts from overordering and spoilage", "Operations are inefficient", "Higher CAC on paid search for SaaS", "Lower ARPU on prepaid plans"], a: 0 },
-  { ctx: "Freight trucking company · profit down", gen: "Market conditions", opts: ["Spot rates fell below contract rates as excess capacity hit the freight market", "The market is bad", "Payer-mix shift to Medicare", "Lower NRR in enterprise accounts"], a: 0 },
-  { ctx: "Fitness chain · membership revenue down", gen: "Retention problem", opts: ["Monthly churn spiked among January joiners after the 3-month promo ended", "Members don't stay", "Lower utilization of jet fleet", "Deposit outflows to money-market funds"], a: 0 },
-  { ctx: "Semiconductor fab · revenue miss", gen: "Supply issues", opts: ["Yield losses on the new 3nm node cut sellable wafers per month", "The factory had problems", "Higher markdowns on winter apparel", "Lower take rate from driver incentives"], a: 0 },
-  { ctx: "Streaming service · profit squeezed", gen: "Content is expensive", opts: ["Content amortization rising faster than subscriber ARPU after sports-rights renewals", "Shows cost a lot", "Higher interchange on debit cards", "Lower yields on 3nm wafers"], a: 0 },
-  { ctx: "Luxury brand · China sales down", gen: "Chinese consumers buying less", opts: ["Outbound tourists shifting purchases to Europe where the price gap is 20–30%", "China demand is weak", "Payer mix shift in rural hospitals", "Lower ancillary revenue per passenger"], a: 0 },
+  { ctx: "US regional bank · profits down 18% · deposit costs up 40%", gen: "Competition increased",
+    a: "NIM compression as online banks and fintechs bid up deposit rates",
+    d: ["Loan losses rising as commercial real estate borrowers miss payments", "Fee income falling as regulators cap overdraft charges at $5", "Branch costs rising from wage inflation for tellers and staff"],
+    why: "Deposit costs up 40% points to the funding side: rate competition squeezes net interest margin. Credit losses, fees and branch costs are real levers but don't match the clue." },
+  { ctx: "European budget airline · margin down 4 pts · revenue per seat flat", gen: "Costs went up",
+    a: "Fuel hedges rolled off at higher prices and EU carbon costs rose",
+    d: ["Ancillary revenue per passenger falling as bag-fee competition grows", "Lower load factors as rivals add capacity on core leisure routes", "Fare discounting to defend share against Ryanair on key routes"],
+    why: "Revenue per seat is flat, so the margin loss is on the cost side. The other three are revenue explanations." },
+  { ctx: "B2B SaaS · revenue growth slowing · new bookings on plan", gen: "Customers are leaving",
+    a: "SMB-tier revenue churn rising after last year's price increase",
+    d: ["Longer enterprise sales cycles pushing new deals into the next quarter", "Lower pipeline conversion as competitors undercut on new-logo pricing", "Fewer inbound leads as paid search cost per click doubled this year"],
+    why: "New bookings are on plan, so the leak is in the installed base: churn or contraction. The others are new-customer problems." },
+  { ctx: "Specialty coffee chain · same-store sales down 6% · weekend sales flat", gen: "Fewer customers",
+    a: "Weekday morning traffic down as hybrid work cut office commutes",
+    d: ["Average ticket falling as customers trade down from lattes to drip", "New competitor openings near suburban stores taking weekend visits", "Price increases pushing occasional buyers to grocery-store coffee"],
+    why: "Weekend sales are flat, so the drop is weekday-specific, which points to commuting. Ticket, price and competition effects would show up on weekends too." },
+  { ctx: "Big-box retailer · gross margin down 2 pts · inventory up 25%", gen: "Pricing pressure",
+    a: "Heavier markdowns to clear excess seasonal inventory",
+    d: ["Freight costs rising as ocean container rates spike on Asia routes", "Mix shift toward lower-margin grocery and household essentials", "Higher shrink from organized retail theft in urban stores"],
+    why: "Inventory up 25% signals overbuying, and clearing it means markdowns. Freight, mix and shrink can hit margin but don't explain the inventory build." },
+  { ctx: "Ride-hailing marketplace · revenue flat · trips and gross bookings both up 12%", gen: "Monetization issues",
+    a: "Take rate squeezed by higher driver incentives to fix supply",
+    d: ["Shorter average trips as riders shift to quick urban hops", "Fare discounts in new cities lowering average price per ride", "Riders trading down to cheaper shared rides from premium options"],
+    why: "Gross bookings grew with trips, so riders pay as much as ever; the company keeps less of it. That is take rate. Shorter trips, discounts and trading down would all shrink gross bookings." },
+  { ctx: "Hospital system · operating loss · patient volumes stable", gen: "Revenue fell",
+    a: "Payer mix shifting toward Medicaid, cutting revenue per stay",
+    d: ["Fewer elective surgeries as patients defer care to save money", "Patients leaving for urban hospitals with stronger specialists", "Emergency visits falling as urgent-care clinics open nearby"],
+    why: "Volumes are stable, so the problem is revenue per patient, which payer mix drives. The other three are volume losses." },
+  { ctx: "Mobile carrier · revenue down 3% · subscriber count up 3%", gen: "Customers spending less",
+    a: "ARPU falling as customers move to cheaper MVNO unlimited plans",
+    d: ["Postpaid churn rising after a major network outage last spring", "Fewer gross adds as cable companies bundle cheap mobile lines", "Prepaid customers porting out to rivals' discount brands"],
+    why: "Subscribers grew, so revenue per subscriber fell: ARPU. The other three lose subscribers." },
+  { ctx: "DTC skincare brand · profit falling · repeat rate and order value steady", gen: "Marketing is less effective",
+    a: "Paid-social CAC up as iOS tracking changes weaken ad targeting",
+    d: ["Subscription cancellations rising as customers try rival serums", "Lapsed customers not returning after the loyalty program ended", "Smaller baskets as customers skip the bundle upgrade at checkout"],
+    why: "Existing customers buy as often and as much as before, so the squeeze is in winning new ones: acquisition cost." },
+  { ctx: "Urban hotel chain · RevPAR down · weekend occupancy and rates at records", gen: "Weak demand",
+    a: "Weak midweek occupancy as corporate travel stays below 2019",
+    d: ["Average daily rates cut to compete with new short-term rentals", "Leisure travelers choosing home rentals for family weekend trips", "OTA commissions rising as more bookings shift to Expedia"],
+    why: "Weekends are full at record rates, so the gap is midweek, which is business travel. OTA commissions hit profit, not RevPAR." },
+  { ctx: "Packaged foods maker · volume down 8% · category flat · shelf space unchanged", gen: "Losing to competitors",
+    a: "Private label gaining share as its price gap passed 30%",
+    d: ["Shoppers buying less of the category as food inflation bites", "Lost facings after a retailer cut the number of SKUs it carries", "Consumers shifting to fresh foods and away from packaged snacks"],
+    why: "The category held and shelf space held, so the brand lost share inside the aisle: private label as the price gap widened." },
+  { ctx: "Auto OEM · EV unit margins negative · selling price per vehicle on plan", gen: "Production costs high",
+    a: "Battery cells over budget and a new EV plant running half empty",
+    d: ["Price cuts to match Tesla reducing average selling price per EV", "Dealers discounting heavily to move slow-selling EV inventory", "Mix shift toward the cheaper base trim lowering average price"],
+    why: "Price is on plan, so the loss is on cost: cells, plus fixed plant costs spread over too few units." },
+  { ctx: "Insurance carrier · underwriting losses · claim frequency normal · rates up 10%", gen: "Claims went up",
+    a: "Catastrophe losses from storms in its Florida homeowners book",
+    d: ["More auto claims as driving miles return to pre-pandemic levels", "Higher claim counts from new policies in high-risk zip codes", "Premium rates cut too far to win market share from rivals"],
+    why: "Frequency is normal and rates went up, so the loss is claim severity: large catastrophe losses." },
+  { ctx: "Payments startup · unit economics worsening · volume and pricing on plan", gen: "Costs rose",
+    a: "Interchange and network fees outpacing merchant pricing",
+    d: ["Lower take rate as large merchants negotiate volume discounts", "Fewer transactions per merchant as small businesses churn", "Support headcount growing faster than the merchant base"],
+    why: "Volume and pricing held, so cost per transaction rose, and the biggest variable cost in payments is interchange and network fees. Support headcount is a fixed cost, not unit economics." },
+  { ctx: "Grocery chain · margin down 1.5 pts · packaged-goods margin steady · online share flat", gen: "Operational issues",
+    a: "Fresh-food shrink rising from over-ordering and spoilage",
+    d: ["Price matching against Walmart on staple packaged goods", "Vendors cutting promotional funding for center-store brands", "Delivery-app fees on online orders squeezing margin"],
+    why: "Packaged goods are fine and online hasn't grown, which points to perishables: shrink in fresh." },
+  { ctx: "Trucking company · profit down · cost per mile flat", gen: "Market conditions",
+    a: "Spot rates falling below contract as excess capacity floods in",
+    d: ["Diesel prices rising faster than fuel-surcharge recovery", "Driver wage inflation from a tight long-haul labor market", "Insurance premiums jumping after large nuclear court verdicts"],
+    why: "Cost per mile is flat, so revenue per mile fell: spot rates under excess capacity. The other three are cost increases." },
+  { ctx: "Fitness chain · membership revenue down · sign-ups up 10% · price unchanged", gen: "Retention problem",
+    a: "Churn spiking among January joiners after their promo ended",
+    d: ["Fewer sign-ups as boutique studios pull new members away", "Lower monthly fees after shifting members to a $10 base plan", "Weaker awareness in new markets after ad spend was cut"],
+    why: "Sign-ups are up and price is unchanged, so members are leaving faster: churn." },
+  { ctx: "Semiconductor fab · revenue miss · demand and pricing strong", gen: "Supply issues",
+    a: "Yield losses on the new 3nm node cutting sellable wafers",
+    d: ["Customers cutting wafer orders as smartphone demand slows", "Price pressure from rival foundries on mature-node chips", "Inventory corrections at PC makers delaying shipments"],
+    why: "Demand and price are strong, so supply is the constraint: yield on the new node." },
+  { ctx: "Streaming service · profit squeezed · subscribers and ARPU both up", gen: "Content is expensive",
+    a: "Content amortization outpacing revenue after sports-rights deals",
+    d: ["Subscriber churn rising after the password-sharing crackdown", "Lower ARPU as more users switch to the cheaper ad-supported tier", "Fewer new sign-ups in saturated markets like the US and UK"],
+    why: "Subscribers and ARPU are both up, so revenue isn't the problem. Content cost is." },
+  { ctx: "Luxury brand · mainland China sales down 20% · Chinese customers' global spend flat", gen: "Chinese consumers buying less",
+    a: "Chinese shoppers buying in Europe at 20–30% lower prices",
+    d: ["Chinese consumers cutting luxury spending amid a property slump", "Local Chinese brands winning younger luxury shoppers", "Brand fatigue after too many logo-heavy collections"],
+    why: "Chinese customers spend as much with the brand globally, so purchases moved abroad: price arbitrage and travel." },
 ];
 function bucketItem(b) {
   return {
     skill: "bucket", type: "mcq", shuffle: true,
-    title: `Generic point: <q>${esc(b.gen)}</q>. Sharpen it.`, context: b.ctx,
-    options: b.opts, answer: b.a,
-    explain: `Specific beats generic: name the <b>metric</b> (NIM, RevPAR, take rate…), the <b>mechanism</b>, and the <b>cause</b> that fits this client. Two distractors are specific but belong to a different industry, which is the constraint check again.`
+    title: `Generic point: <q>${esc(b.gen)}</q>. Which sharper version fits the data?`, context: b.ctx,
+    options: [b.a, ...b.d], answer: 0,
+    explain: `${esc(b.why)} A strong sub-bucket names the <b>metric</b>, the <b>mechanism</b> and a <b>cause</b> that fits this client's numbers.`
   };
 }
 
@@ -1074,77 +1204,127 @@ function problemItem() {
 
 /* ============================================================
    CONTENT: Three-Sentence Close
+   model = verdict, reasons with case numbers, risk + next step.
+   vague = the model's reasons sentence with every number stripped out.
    ============================================================ */
 const CLOSES = [
   { sit: "A European regional bank asks whether to launch a mobile-first brand to win back deposits from neobanks.",
     facts: ["Deposits down 9% in 2 years, mostly under-35 customers", "Building the brand costs €60M; break-even in year 4 at 150K customers", "Neobank customers hold small balances (avg €2K vs €11K at the bank)", "Partnering with an existing BaaS platform cuts launch cost to €25M"],
     model: "The bank should launch the mobile-first brand, but through a BaaS partnership rather than building it in-house. Partnering cuts the upfront cost from €60M to €25M and targets the under-35 segment that drove most of the 9% deposit decline. The main risk is that neobank customers bring small balances, so we should pilot in two markets and track deposits per customer against the €11K core average before scaling.",
+    vague: "Partnering is far cheaper than building in-house and targets the younger customers who drove most of the recent deposit decline.",
     weak: "There are a lot of considerations here, including deposits, costs and competition. The neobanks are clearly a threat and digital is the future of banking. Building a brand is expensive but could pay off in the long run. I think the bank should probably look into a digital offering of some kind. We'd also want to think about the risks and do more analysis." },
   { sit: "A US specialty coffee chain asks whether to close its 40 lowest-performing urban stores.",
     facts: ["Those 40 stores lose $6M a year combined", "Closing costs $10M one-time (leases, severance)", "Nearby stores would capture ~30% of their sales", "Urban weekday traffic is down 22% since hybrid work"],
     model: "The client should close the 40 underperforming urban stores. They lose $6M a year, so the $10M closing cost pays back in under two years, and nearby stores should recapture about 30% of the lost sales. The key risk is losing brand presence downtown, so next we should test converting 5 of them to smaller pickup-only formats before closing them all.",
+    vague: "They lose a lot of money every year, so the closing cost pays back quickly, and nearby stores should recapture some of the lost sales.",
     weak: "Urban stores are struggling because of hybrid work and lower traffic. Some of them lose money while others might be okay. Closing them has costs but could also save money over time. We should probably consider closing some of them. More analysis on each store would help us decide." },
   { sit: "A Series B fintech asks whether to expand its earned-wage-access product from the US into the UK.",
     facts: ["14 months of runway at current burn", "UK market ~40% the size of US, regulation still forming", "UK launch costs $8M and takes 9 months before first revenue", "US employer pipeline could add 60% revenue at $3M extra sales spend"],
-    model: "The company should not enter the UK now and should instead double down on its US employer pipeline. A $3M sales push could add 60% revenue, while the UK costs $8M and earns nothing for 9 of its 14 months of runway. We should revisit the UK after the next raise, once regulation there is clearer.",
+    model: "The company should not enter the UK now and should instead double down on its US employer pipeline. A $3M sales push could add 60% revenue, while the UK costs $8M and earns nothing for 9 of its 14 months of runway. The risk is a rival locking up UK employers first, so we should revisit the UK after the next raise, once regulation there is clearer.",
+    vague: "A US sales push could add a lot of revenue cheaply, while the UK is expensive and slow to earn anything within the remaining runway.",
     weak: "The UK is an interesting market with lots of potential. However it is smaller than the US and regulation is unclear. The company does not have a lot of runway. There are good opportunities in the US as well. It might make sense to wait, but it depends on investor appetite." },
   { sit: "A PE-owned dental chain asks how to restart flat same-clinic revenue before a planned exit in 3 years.",
     facts: ["Hygiene recall rate is 48% vs 65% industry benchmark", "Chairs are used 61% of open hours", "Raising recall to 60% adds ~$14M revenue at ~40% margin", "New-clinic openings take 2 years to break even"],
     model: "The chain should prioritize lifting its hygiene recall rate from 48% to 60% over opening new clinics. That alone adds about $14M of revenue at roughly 40% margin, uses idle chair capacity at 61% utilization, and shows up in EBITDA well before the 3-year exit. The risk is front-desk execution, so next step is to pilot automated recall reminders in 10 clinics and track rebook rates monthly.",
+    vague: "That alone adds meaningful revenue at a healthy margin, uses idle chair capacity, and shows up in EBITDA well before the planned exit.",
     weak: "There are several ways to grow, like recall, new clinics, and pricing. Recall seems low compared to peers. Chair utilization could also be better. New clinics take a while to pay back. The PE firm will want growth before exit so we should do a combination of things." },
-  { sit: "A packaged-foods maker asks whether to launch its own private-label line for a major UK grocer.",
-    facts: ["Branded volume down 11% as store brands gain share", "Plant runs at 68% utilization", "Private-label contract: £40M revenue at 9% margin vs 22% on branded", "Grocer estimates 15% cannibalization of the client's branded sales"],
-    model: "The client should accept the private-label contract. It fills idle capacity at a plant running at 68% utilization and adds £40M of revenue, which more than offsets the expected 15% cannibalization of branded sales. The main risk is training shoppers to trade down, so the contract should exclude the premium SKUs and come up for review after 12 months.",
+  { sit: "A packaged-foods maker asks whether to make private-label product for a major UK grocer.",
+    facts: ["Branded sales £120M at 22% margin, volume down 11%", "Plant runs at 68% utilization", "Private-label contract: £40M revenue at 9% margin", "Grocer estimates 5% cannibalization of the client's branded sales"],
+    model: "The client should accept the private-label contract. It adds £40M of revenue at 9% margin, about £3.6M of profit, against roughly £1.3M lost to 5% cannibalization of branded sales, and it fills a plant running at 68% utilization. The main risk is training shoppers to trade down, so the contract should exclude premium SKUs and come up for review after 12 months.",
+    vague: "It adds meaningful profit even after some cannibalization of branded sales, and it fills spare capacity at a plant that is far from full.",
     weak: "Private label is growing in the UK and that is hurting the brand. The plant has spare capacity, which is a consideration. However margins are lower on private label and there could be cannibalization. On balance it might be worth exploring if the numbers work. Let's discuss with the grocer further." },
   { sit: "A Latin American low-cost airline asks whether to launch routes to Spain.",
     facts: ["Requires 4 wide-body aircraft, a new fleet type", "Long-haul unit cost (CASK) would be 35% above its short-haul network", "Projected load factor 78% vs 88% domestically", "Domestic demand growing 9% a year with a gate-slot backlog"],
-    model: "The airline should not launch Spain routes and should instead add capacity on its domestic network. Long-haul would need a new wide-body fleet with 35% higher unit costs and a weaker 78% load factor, while domestic demand is growing 9% a year. Next step is to secure the backlog of domestic gate slots and revisit long-haul through a codeshare partner rather than its own aircraft.",
+    model: "The airline should not launch Spain routes and should instead add capacity on its domestic network. Long-haul would need a new wide-body fleet with 35% higher unit costs and a weaker 78% load factor, while domestic demand is growing 9% a year. The risk is ceding Spain to a rival, so next step is to secure the domestic gate-slot backlog and test long-haul demand through a codeshare partner.",
+    vague: "Long-haul would need a new wide-body fleet with much higher unit costs and weaker load factors, while domestic demand keeps growing fast.",
     weak: "International expansion is exciting and Spain has strong ties to Latin America. But long-haul is different from what the airline does today. Costs would be higher and load factors lower. The domestic market is also attractive. We need to weigh both options carefully before deciding." },
   { sit: "A rural nonprofit hospital system asks how to close a $20M annual operating loss.",
-    facts: ["62% of revenue from Medicare and Medicaid", "28% of local patients travel to urban hospitals for surgery", "Two of five facilities run at under 40% occupancy", "Consolidating the two facilities saves $11M a year"],
-    model: "The system should consolidate its two lowest-occupancy facilities and use the savings to win back surgical patients. Consolidation saves about $11M a year, and recapturing even half of the 28% of patients who travel for surgery would close most of the remaining gap. The main risk is community backlash over access, so we should keep urgent-care clinics at both sites and present the plan with local leaders first.",
+    facts: ["62% of revenue from Medicare and Medicaid", "Patients who travel to urban hospitals for surgery represent ~$18M of lost revenue a year", "Two of five facilities run at under 40% occupancy", "Consolidating the two facilities saves $11M a year"],
+    model: "The system should consolidate its two lowest-occupancy facilities and use the savings to win back surgical patients. Consolidation saves about $11M a year, and recapturing half of the $18M in surgical revenue lost to urban hospitals would close the rest of the $20M gap. The main risk is community backlash over access, so we should keep urgent-care clinics at both sites and present the plan with local leaders first.",
+    vague: "Consolidation saves a lot every year, and winning back surgical patients who travel to the city would close most of the remaining gap.",
     weak: "The hospital faces many challenges including payer mix, patient outmigration, and low occupancy. Rural hospitals across the country face similar problems. There are options around consolidation and growth. Each has pros and cons. We should probably prioritize the ones that are most feasible." },
   { sit: "A DTC mattress brand asks how to respond to a 60% rise in customer acquisition cost.",
     facts: ["CAC rose from $250 to $400 after iOS privacy changes", "Contribution per order is $420", "Customers buy once every ~8 years", "Retail partner offers shelf space in 300 stores at 30% wholesale discount"],
     model: "The brand should take the retail partnership and cut paid-social spend. At $400 CAC against $420 contribution per order, it barely breaks even on customers who buy once every 8 years, while the retail channel reaches new buyers without paid acquisition despite the 30% wholesale discount. The risk is channel conflict with its own site, so next step is a 50-store pilot comparing contribution per unit against DTC.",
+    vague: "Acquisition cost now nearly equals the contribution per order on customers who rarely buy again, while retail reaches new buyers without paid ads.",
     weak: "CAC has gone up a lot because of iOS changes. That makes it harder to be profitable. Retail could be an option, though it comes with a discount. They could also try other marketing channels like influencers or TV. There is no easy answer and they should test different approaches." },
 ];
+
+const ABBREV = /\b(Mr|Mrs|Ms|Dr|St|Inc|Co|Corp|Ltd|No|Jr|Sr|vs|approx|etc|est|e\.g|i\.e|U\.S|U\.K|E\.U)\./gi;
 function sentences(text) {
-  const t = text.trim().replace(/\s+/g, " ");
+  // Lines and bullets count as sentence breaks
+  const lines = text.split(/\n+/).map(l => l.replace(/^\s*(?:[-•*]|\d+[.)])\s+/, "").trim()).filter(Boolean)
+    .map(l => /[.!?]["”']?$/.test(l) ? l : l + ".");
+  const t = lines.join(" ").replace(/\s+/g, " ");
   if (!t) return [];
-  // Protect decimals and common abbreviations
-  const prot = t.replace(/(\d)\.(\d)/g, "$1§$2").replace(/\b(e\.g|i\.e|vs|approx|U\.S|etc)\./gi, m => m.replace(/\./g, "§"));
-  return prot.split(/(?<=[.!?])\s+/).map(s => s.replace(/§/g, ".")).filter(s => s.trim().length > 2);
+  const prot = t.replace(/(\d)\.(\d)/g, "$1§$2").replace(ABBREV, m => m.replace(/\./g, "§")).replace(/\.{3}/g, "…");
+  let ss = prot.split(/(?<=[.!?])\s+/).map(s => s.replace(/§/g, ".")).filter(s => s.trim().length > 1);
+  // A short tag question at the end ("Sound good?") isn't a sentence of the close
+  if (ss.length > 1 && /\?$/.test(ss[ss.length - 1]) && ss[ss.length - 1].split(/\s+/).length <= 4) ss = ss.slice(0, -1);
+  return ss;
 }
-function gradeClose(text) {
+const NEG_CALL = /\b(should not|shouldn't|must not|do not|don't|not (?:enter|launch|buy|close|proceed|accept|expand|build|acquire|take)|walk away|hold off|pass on|stay out)\b|^\s*no\b/i;
+const callOf = s => (NEG_CALL.test(s) ? "no-go" : "go");
+const numsIn = s => (s.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+function gradeClose(text, c) {
   const ss = sentences(text);
   const words = text.trim().split(/\s+/).filter(Boolean).length;
-  const first = ss[0] || "";
+  const s1 = ss[0] || "", rest = ss.slice(1).join(" ");
+  const caseNums = c ? new Set(numsIn(c.facts.join(" ") + " " + c.sit)) : null;
+  const used = [...new Set(numsIn(ss.slice(1).join(" ") || text))];
+  const matched = caseNums ? used.filter(n => caseNums.has(n)) : used;
+  const hedgeRe = /\b(I think|maybe|perhaps|probably|might|could|kind of|sort of|potentially|it depends|consider|explore|look into)\b/gi;
+  const verdictWord = /\b(should|shouldn't|recommend|recommends|must|ought to|needs? to)\b/i.test(s1) || /^\s*(yes|no)\b[,:—–-]/i.test(s1);
+  const contradicts = /\bshould\s+(?!not\b)/i.test(s1) && /\b(should not|shouldn't)\b/i.test(s1) && !/\b(instead|rather)\b/i.test(s1);
+  const noCommit = /\b(don't know|not sure|depends|hard to say|unclear|no easy answer|nuanced)\b/i.test(s1);
+  const hedges = s1.match(hedgeRe) || [];
+  const risk = /\b(risk|downside|exposure|concern|threat|caveat|danger|vulnerab)/i.test(rest);
+  const action = /\b(next step|next,|next we|pilot|test|trial|monitor|track|revisit|secure|launch|brief|validate|negotiate|start|begin|roll out|phase|review|keep|present|automate|exclude)\b/i.test(rest);
+  const modelCall = c ? callOf(sentences(c.model)[0]) : null;
+  const callMatch = c ? callOf(s1) === modelCall : true;
+  const runOn = ss.find(s => s.split(/\s+/).length > 40);
+
   const checks = [
-    { label: "Exactly three sentences", ok: ss.length === 3, w: 2 },
-    { label: "Answer first: sentence 1 is a clear verdict", ok: /\b(should|shouldn't|should not|recommend|go ahead|do not|don't|yes|no)\b/i.test(first) && !/\b(depends|it's hard|complicated|consider(ing)?|explore)\b/i.test(first), w: 1 },
-    { label: "Reasons carry at least two numbers", ok: (text.match(/\d+(\.\d+)?/g) || []).length >= 2, w: 1 },
-    { label: "Ends with a risk and a next step", ok: /\b(risk|next step|pilot|test|monitor|track|revisit|watch|mitigat)/i.test(ss[ss.length - 1] || ""), w: 1 },
+    { key: "three", label: "Exactly three sentences", ok: ss.length === 3 },
+    { key: "verdict", label: "Sentence 1 commits to a clear call", ok: verdictWord && !contradicts && !noCommit && hedges.length === 0 },
+    { key: "nums", label: c ? "Reasons use at least two numbers from this case" : "Reasons carry at least two numbers", ok: matched.length >= 2 },
+    { key: "risk", label: "Names a risk and a concrete next step", ok: risk && action },
+    { key: "call", label: "Your call matches what the numbers support", ok: callMatch },
   ];
-  const hedges = (text.match(/\b(I think|maybe|perhaps|probably|kind of|sort of|might|could potentially|it depends)\b/gi) || []);
-  let score = checks.reduce((a, c) => a + (c.ok ? c.w : 0), 0);
-  if (ss.length === 2 || ss.length === 4) score += 1, checks[0].partial = true;
-  if (hedges.length) score -= 1;
-  if (words > 90) score -= 1;
-  return { ss, words, checks, hedges, score: clamp(score, 0, 5) };
+  let score = checks.filter(x => x.ok).length;
+  const penalties = [];
+  if (words > 75) { score--; penalties.push(`${words} words; a partner stops listening around 75`); }
+  if (runOn) { score--; penalties.push(`A ${runOn.split(/\s+/).length}-word sentence; split it or cut it`); }
+  if (ss.length >= 4) { score = Math.min(score, 2); penalties.push(`${ss.length} sentences caps the score at 2/5`); }
+  if (words < 25) { score = Math.min(score, 2); penalties.push("Under 25 words is too thin to carry the reasons"); }
+  return { ss, words, checks, hedges, matched, callMatch, call: callOf(s1), modelCall, penalties, score: clamp(score, 0, 5) };
 }
+function roleLabel(i, n) { return i === 0 ? "Verdict" : i === 1 ? "Reasons" : i === 2 ? "Risk + next step" : "Cut this"; }
+function closeBreakdown(g) {
+  return `<div class="roles">${g.ss.map((s, i) => {
+    const bad = i >= 3 || (i === 0 && !g.checks[1].ok) || (i === 1 && !g.checks[2].ok) || (i === Math.min(2, g.ss.length - 1) && i > 0 && !g.checks[3].ok);
+    return `<div class="role ${bad ? "bad" : ""}"><span class="rtag">${roleLabel(i, g.ss.length)}</span><span>${esc(s)}</span></div>`;
+  }).join("")}</div>`;
+}
+
 function closePickItem(c) {
-  const long = "To recap, we looked at the market, the company's economics, and the competitive landscape. " + c.model + " We could also run additional analyses on customer segments. Overall, it's a nuanced picture with several moving parts.";
-  const opts = shuffle([{ t: c.model, ok: true }, { t: c.weak, ok: false }, { t: long, ok: false }]);
+  const [v, r, k] = sentences(c.model);
+  const hedged = v.replace(/\bshould not\b/, "may not want to").replace(/\bshould\b/, "may want to");
+  const opts = shuffle([
+    { t: c.model, ok: true },
+    { t: [r, k, v].join(" "), tag: "buried" },
+    { t: [hedged, r, k].join(" "), tag: "hedged" },
+    { t: [v, c.vague, k].join(" "), tag: "vague" },
+  ]);
   return {
     skill: "close", type: "mcq", context: c.sit, facts: c.facts,
     title: "Partner: \"Give me your recommendation.\" Pick the best close.",
     options: opts.map(o => o.t), answer: opts.findIndex(o => o.ok),
-    explain: "The winner is exactly three sentences: verdict, reasons with numbers, risk plus next step. The long version contains the right answer but buries it between a recap and filler. The weak one never commits and has no numbers."
+    explain: "All four are three sentences; each wrong one breaks a single rule. One opens with the reasons and buries the call at the end. One hedges the verdict (\"may want to\"). One drops every number from the reasons. The winner leads with the call, backs it with this case's numbers, and ends with a risk and a next step."
   };
 }
 function closeWriteItem(c) {
-  return { skill: "close", type: "text", context: c.sit, facts: c.facts, model: c.model, title: "Write your three-sentence close." };
+  return { skill: "close", type: "text", context: c.sit, facts: c.facts, model: c.model, closeCase: c, title: "Write your three-sentence close." };
 }
 
 /* ============================================================
@@ -1152,6 +1332,7 @@ function closeWriteItem(c) {
    ============================================================ */
 let S = null;            // active session
 let screen = "home";
+let resultsAt = 0;
 let timerId = null;
 let bag = {};            // non-repeating draws
 function draw(name, arr) {
@@ -1221,6 +1402,7 @@ function buildQueue(mode) {
 }
 
 function startSession(mode, opts = {}) {
+  stopConfetti();
   const sprint = mode === "math" || mode === "boss" ? 90 : mode === "lingo" || mode === "weak" || mode.startsWith("m:") ? 60 : 0;
   S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [], weak: opts.weak || null, gs: gymStats(), startTs: Date.now(), reask: [],
     bosses: mode === "boss" ? opts.bosses.map(k => ({ k, hp: 3 })) : null };
@@ -1593,7 +1775,7 @@ function renderGame() {
     <section class="card stage" id="stage"></section>
     <p class="hint" id="keyhint"></p>
   </div>`;
-  $("#quitBtn").addEventListener("click", () => (S.items.length ? finish() : renderHome()));
+  $("#quitBtn").addEventListener("click", requestQuit);
   renderQuestion();
 }
 
@@ -1668,7 +1850,7 @@ function renderQuestion() {
       ${q.tms ? `<div class="fuse" title="Standard: ${(q.tms / 1000).toFixed(1)}s"><i id="fuseBar" style="animation-duration:${q.tms}ms"></i></div>` : ""}
       ${q.auto ? `<form class="factform" id="numForm" autocomplete="off"><input id="numIn" class="fact-in" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit === "%" ? `<span class="fact-unit">%</span>` : ""}</form>`
       : `<form class="numrow" id="numForm" autocomplete="off">
-        <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m"}" aria-label="Your answer">
+        <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m · use k / m / b"}" aria-label="Your answer">
         <button class="btn primary" type="submit">Submit</button>
       </form>`}
       ${q.sprint ? `<div class="flash" id="flash"></div>` : `<p class="hint">Within ${Math.round(q.tol * 100)}% counts.${q.auto ? "" : " Suffixes k / m / b work."}</p>`}
@@ -1702,7 +1884,9 @@ function renderQuestion() {
       <div class="nextrow"><span class="hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to submit</span><button class="btn primary" type="button" id="closeBtn">Submit close</button></div>
       <div id="fbslot"></div>`;
     const ta = $("#closeIn"); ta.focus();
+    const me = S;
     const upd = () => {
+      if (S !== me || !$("#meter")) return clearInterval(me.meterTimer);
       if (S.answered) return;
       const ss = sentences(ta.value).length, wc = ta.value.trim().split(/\s+/).filter(Boolean).length, sec = Math.round((Date.now() - S.qStart) / 1000);
       $("#meter").innerHTML = `<span class="${ss > 3 ? "over" : ""}">Sentences <b>${ss}</b>/3</span><span class="${wc > 75 ? "over" : ""}">Words <b>${wc}</b></span><span class="${sec > 60 ? "over" : ""}">Time <b>${sec}s</b></span>`;
@@ -1746,8 +1930,10 @@ function answerNum(v) {
   // Accept "12" for 12% and money answers given in $M if user typed a bare small number
   const target = q.answer;
   const near = (a) => Math.abs(a - target) <= Math.max(Math.abs(target) * q.tol, q.abs || 0);
-  let ok = near(x);
-  if (!ok && !q.strict && !/[kmbt%]/i.test(v) && Math.abs(target) >= 1e5) ok = [1e3, 1e6, 1e9].some(m => near(x * m));
+  const ok = near(x);
+  // Right digits at the wrong scale (e.g. 960 for 960K) is a zeros error, not a pass
+  const magMiss = !ok && [1e3, 1e6, 1e9, 1e-3, 1e-6, 1e-9].some(m => near(x * m));
+  const magNote = magMiss ? "Right digits, wrong magnitude. Count the zeros, or add k / m / b." : "";
   const r = record(ok ? 1 : 0);
   const shown = q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
   const fb = $("#fuseBar"); if (fb) fb.style.animationPlayState = "paused";
@@ -1767,12 +1953,12 @@ function answerNum(v) {
   }
   if (q.sprint) {
     const f = $("#flash"); f.className = "flash " + (ok ? "ok" : "no");
-    f.textContent = (ok ? `✓ ${shown}${fast && !S.bosses ? "  ·  under standard" : ""}` : `✗ ${shown}${q.tip ? "  ·  " + q.tip : ""}`) + bossMsg;
+    f.textContent = (ok ? `✓ ${shown}${fast && !S.bosses ? "  ·  under standard" : ""}` : `✗ ${shown}  ·  ${magNote || q.tip || ""}`) + bossMsg;
     $("#numIn").disabled = true;
     const me = S; setTimeout(() => { if (S === me) next(); }, delay); return;
   }
   $("#numIn").disabled = true;
-  showFeedback(ok ? 1 : 0, `<div>Answer: <b class="num">${shown}</b>. You said <span class="num">${esc(v)}</span>.</div>
+  showFeedback(ok ? 1 : 0, `<div>Answer: <b class="num">${shown}</b>. You said <span class="num">${esc(v)}</span>.${magNote ? ` <b>${magNote}</b>` : ""}</div>
     ${q.steps ? `<ul>${q.steps.map(s => `<li class="num" style="font-family:var(--body)">${esc(s)}</li>`).join("")}</ul>` : ""}
     <span class="quip">+${r.gained} XP · ${(r.ms / 1000).toFixed(0)}s (partner pace: ${(SKILLS[q.skill].target / 1000).toFixed(0)}s)</span>`);
 }
@@ -1794,7 +1980,7 @@ function answerTap() {
   });
   $("#lockBtn").disabled = true;
   const why = q.cons.map((c, i) => `<div><b>${esc(c.phrase)}</b><span>${hitCons.has(i) ? "✓" : "<span style='color:var(--bad)'>missed</span>"} · ${esc(c.why)}</span></div>`).join("");
-  showFeedback(okv, `<div>Caught <b class="num">${hitCons.size}/${q.cons.length}</b> constraints${fp ? `, with <b class="num">${fp}</b> word${fp > 1 ? "s" : ""} that don't change the framework` : ""}.</div>
+  showFeedback(okv, `<div>Caught <b class="num">${hitCons.size}/${q.cons.length}</b> constraints${fp ? `, with <b class="num">${fp}</b> word${fp > 1 ? "s" : ""} that ${fp > 1 ? "don't" : "doesn't"} change the framework` : ""}.</div>
     <div class="why">${why}</div><span class="quip">+${r.gained} XP · ${quipFor(okv)}</span>`);
 }
 
@@ -1803,13 +1989,19 @@ function answerText() {
   const q = current(), v = $("#closeIn").value;
   if (v.trim().split(/\s+/).length < 8) { $("#meter").insertAdjacentHTML("beforeend", `<span class="over">Write at least one full sentence first.</span>`); return; }
   S.answered = true; clearInterval(S.meterTimer);
-  const g = gradeClose(v);
+  const g = gradeClose(v, q.closeCase);
   const r = record(g.score / 5, { score: g.score });
   $("#closeIn").disabled = true;
-  const list = g.checks.map(c => `<li><span class="m ${c.ok ? "y" : "n"}">${c.ok ? "✓" : c.partial ? "~" : "✗"}</span><span>${c.label}${c.label.startsWith("Exactly") ? ` <span class="muted">(you wrote ${g.ss.length})</span>` : ""}</span></li>`).join("")
-    + (g.hedges.length ? `<li><span class="m n">−1</span><span>Hedging: ${g.hedges.map(h => `"${esc(h)}"`).join(", ")}</span></li>` : "")
-    + (g.words > 90 ? `<li><span class="m n">−1</span><span>${g.words} words; a partner stops listening around 75</span></li>` : "");
+  const detail = {
+    three: ` <span class="muted">(you wrote ${g.ss.length})</span>`,
+    verdict: g.hedges.length ? ` <span class="muted">(hedge: ${g.hedges.map(h => `"${esc(h)}"`).join(", ")})</span>` : "",
+    nums: ` <span class="muted">(${g.matched.length ? "used " + g.matched.join(", ") : "none of the case's figures found"})</span>`,
+    call: g.callMatch ? "" : ` <span class="muted">(you said ${g.call}; the facts point to ${g.modelCall})</span>`,
+  };
+  const list = g.checks.map(c => `<li><span class="m ${c.ok ? "y" : "n"}">${c.ok ? "✓" : "✗"}</span><span>${c.label}${detail[c.key] || ""}</span></li>`).join("")
+    + g.penalties.map(p => `<li><span class="m n">−</span><span>${esc(p)}</span></li>`).join("");
   showFeedback(g.score / 5, `<div><b class="num">${g.score}/5</b> on the close rubric · ${(r.ms / 1000).toFixed(0)}s · ${g.words} words</div>
+    ${closeBreakdown(g)}
     <ul class="rubric">${list}</ul>
     <div class="model"><span class="eyebrow">Model close</span><p>${esc(q.model)}</p></div>
     <span class="quip">+${r.gained} XP · ${quipFor(g.score / 5)}</span>`);
@@ -1886,13 +2078,17 @@ async function finish() {
   if (s.bosses) $("#againBtn").firstChild.textContent = "Pick new bosses ";
   if (isMath) $("#gymBtn2").addEventListener("click", renderGym);
   $("#homeBtn2").addEventListener("click", renderHome);
-  $("#againBtn").focus({ preventScroll: true });
+  resultsAt = Date.now();
+  setTimeout(() => { if (screen === "results" && $("#againBtn") && document.activeElement === document.body) $("#againBtn").focus({ preventScroll: true }); }, 500);
   if (acc >= .8 || r1.i > r0.i) confetti();
   scrollTo(0, 0);
 }
 
+let confettiRun = 0;
+function stopConfetti() { confettiRun++; const c = $("#confetti"); c.getContext("2d").clearRect(0, 0, c.width, c.height); }
 function confetti() {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const run = ++confettiRun;
   const c = $("#confetti"), ctx = c.getContext("2d");
   c.width = innerWidth; c.height = innerHeight;
   const cs = getComputedStyle(document.documentElement);
@@ -1902,6 +2098,7 @@ function confetti() {
   (function loop() {
     ctx.clearRect(0, 0, c.width, c.height);
     P.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); });
+    if (run !== confettiRun) return;
     if (++f < 150) requestAnimationFrame(loop); else ctx.clearRect(0, 0, c.width, c.height);
   })();
 }
@@ -1910,23 +2107,41 @@ function confetti() {
    Keyboard + boot
    ============================================================ */
 document.addEventListener("keydown", e => {
-  const tag = (e.target.tagName || "").toLowerCase();
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;   // leave browser shortcuts alone
+  const t = e.target, tag = (t.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea";
+  const onButton = tag === "button";
   if (!S) {
-    if (tag === "textarea" || tag === "input") return;
+    if (typing) return;
     if ((e.key === "d" || e.key === "D") && screen === "home") startSession("daily");
-    if (e.key === "Enter" && $("#againBtn") && document.activeElement !== $("#homeBtn2")) { e.preventDefault(); $("#againBtn").click(); }
+    // On results, Enter runs it back only once the screen has settled and nothing else has focus
+    if (e.key === "Enter" && screen === "results" && !onButton && Date.now() - resultsAt > 500 && $("#againBtn")) { e.preventDefault(); $("#againBtn").click(); }
     return;
   }
-  if (e.key === "Escape") { S.items.length ? finish() : renderHome(); return; }
+  if (e.key === "Escape") { if (tag === "textarea") { t.blur(); return; } requestQuit(); return; }
   const q = current();
-  if (!q) return;
-  if (S.answered && e.key === "Enter" && $("#nextBtn")) { e.preventDefault(); next(); return; }
-  if (!S.answered && q.type === "mcq" && /^[1-9]$/.test(e.key) && tag !== "textarea" && tag !== "input") {
+  if (!q || $("#quitBar")) return;
+  if (S.answered && e.key === "Enter" && !onButton && !typing && $("#nextBtn")) { e.preventDefault(); next(); return; }
+  if (!S.answered && q.type === "mcq" && /^[1-9]$/.test(e.key) && !typing) {
     const i = +e.key - 1; if (i < q.options.length) answerMCQ(i);
   }
-  if (!S.answered && q.type === "tap" && e.key === "Enter" && tag !== "button") { e.preventDefault(); answerTap(); }
+  if (!S.answered && q.type === "tap" && e.key === "Enter" && !onButton) { e.preventDefault(); answerTap(); }
 });
-$("#homeBtn").addEventListener("click", () => { if (S && S.items.length) finish(); else renderHome(); });
+$("#homeBtn").addEventListener("click", () => { if (S) requestQuit(); else renderHome(); });
+
+// Quitting after answering anything asks once, in the page (the viewer blocks confirm()).
+function requestQuit() {
+  if (!S) return renderHome();
+  if (!S.items.length) return renderHome();
+  if ($("#quitBar")) return finish();
+  const bar = document.createElement("div");
+  bar.id = "quitBar"; bar.className = "quitbar"; bar.setAttribute("role", "alertdialog"); bar.setAttribute("aria-label", "Quit session");
+  bar.innerHTML = `<span>End this session? Your ${S.items.length} answer${S.items.length > 1 ? "s" : ""} so far will be saved.</span><span class="qb"><button class="btn sm" type="button" id="qbKeep">Keep going</button><button class="btn sm primary" type="button" id="qbEnd">End and save</button></span>`;
+  $("#stage").before(bar);
+  $("#qbEnd").addEventListener("click", finish);
+  $("#qbKeep").addEventListener("click", () => { bar.remove(); const f = $("#numIn:not([disabled])") || $("#closeIn:not([disabled])") || $("#nextBtn") || $(".opt:not([disabled])"); if (f) f.focus(); });
+  $("#qbKeep").focus();
+}
 
 Store.load();
 renderHome();
