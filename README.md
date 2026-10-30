@@ -37,6 +37,8 @@ Tier 1 standards follow basic-fact fluency research (about 30–40 correct/min p
 multi-step work; Miller & Heward 1992 as cited by Rocket Math), scaled down for longer typed answers.
 Tier 2 standards follow case-prep guidance of about 5 s per simple percentage and under 10 s per calculation step.
 
+Tier 1 fact answers submit automatically once you have typed as many digits as the answer has (percent answers to one decimal, e.g. `12.5`), so there is no Enter press. Tier 2 answers still use Enter.
+
 Every answer is tracked per fact (e.g. `7×8`, `3/8`, `M×K`). The Math Gym screen shows a fluency ladder
 (rate = median of the last three 60 s checks), a times-table heat map, fact tables for every category,
 a weakest-facts list you can drill directly, a recommended next category, and a strategy note for each
