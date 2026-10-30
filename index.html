@@ -278,19 +278,14 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .standards p { max-width: 75ch; font-size: .92rem; }
 .standards a { color: var(--accent); }
 
-/* fact entry: digit slots, fuse, bosses */
-.slotform { position: relative; display: flex; justify-content: center; }
-.slots { display: flex; gap: 8px; justify-content: center; align-items: center; cursor: text; }
-.slot { width: 3rem; height: 3.7rem; display: flex; align-items: center; justify-content: center; border: 2px solid var(--line); border-radius: 10px; background: var(--surface-2); font-family: var(--mono); font-size: 2rem; font-weight: 600; transition: border-color .12s, transform .12s; }
-.slot.next { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.slot.filled { border-color: var(--accent); animation: slotpop .16s ease; }
-@keyframes slotpop { 50% { transform: scale(1.12); } }
-.slot-sep { font-family: var(--mono); font-size: 2rem; font-weight: 600; color: var(--muted); }
-.slots.ok .slot { border-color: var(--good); background: var(--good-soft); color: var(--good); }
-.slots.no .slot { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
-.slots.no { animation: shake .3s ease; }
+/* fact entry: compact auto-submit box, fuse, bosses */
+.factform { display: flex; justify-content: center; align-items: center; gap: 8px; }
+.fact-in { width: 7.5rem; font-family: var(--mono); font-size: 1.8rem; font-weight: 600; text-align: center; padding: 8px 10px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); }
+.fact-in:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.fact-in.ok { border-color: var(--good); background: var(--good-soft); color: var(--good); }
+.fact-in.no { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); animation: shake .3s ease; }
+.fact-unit { font-family: var(--mono); font-size: 1.8rem; font-weight: 600; color: var(--muted); }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
-.slot-input { position: absolute; inset: 0; opacity: 0; font-size: 16px; width: 100%; border: 0; caret-color: transparent; }
 .fuse { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; max-width: 360px; width: 100%; margin: 0 auto; }
 .fuse i { display: block; height: 100%; width: 100%; background: var(--good); animation-name: fuse; animation-timing-function: linear; animation-fill-mode: forwards; }
 @keyframes fuse { 0% { width: 100%; background: var(--good); } 60% { background: var(--hl); } 100% { width: 0%; background: var(--bad); } }
@@ -310,7 +305,6 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 @media (prefers-reduced-motion: reduce) { .fuse i { animation: none !important; } }
 
 @media (max-width: 680px) {
-  .slot { width: 2.6rem; height: 3.3rem; font-size: 1.7rem; }
   .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
   .mode-math { grid-template-columns: 1fr; }
@@ -1641,7 +1635,7 @@ function contextBlock(q) {
 
 const KEYHINT = {
   mcq: "Keys: <kbd>1</kbd>–<kbd>4</kbd> pick an option · <kbd>Enter</kbd> next · <kbd>Esc</kbd> quit",
-  auto: "Answers submit as soon as every digit is filled · <kbd>Backspace</kbd> fixes a digit · <kbd>Esc</kbd> quit",
+  auto: "Answers submit automatically once you've typed every digit · <kbd>Esc</kbd> quit",
   num: "<kbd>Enter</kbd> submit · suffixes k / m / b and % work · <kbd>Esc</kbd> quit",
   tap: "Click words to highlight · <kbd>Enter</kbd> lock in · <kbd>Esc</kbd> quit",
   text: "<kbd>Ctrl</kbd>+<kbd>Enter</kbd> submit · <kbd>Esc</kbd> quit",
@@ -1668,12 +1662,11 @@ function renderQuestion() {
     st.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => answerMCQ(+b.dataset.i)));
   } else if (q.type === "num") {
     const label = q.reask ? `<span class="eyebrow again">Again · you missed this one</span>` : q.label && S.mode !== "m:" + q.c && !S.bosses ? `<span class="eyebrow" style="text-align:center">${esc(q.label)}</span>` : "";
-    const slots = q.auto ? [...q.pattern].map(ch => /\d/.test(ch) ? `<span class="slot"></span>` : `<span class="slot-sep">${ch}</span>`).join("") + (q.unit === "%" ? `<span class="slot-sep">%</span>` : "") : "";
     st.innerHTML = `${S.bosses ? bossBar() : ""}${contextBlock(q)}
       ${label}
       <div class="${q.sprint ? "sprint-q" : "qtitle"}">${esc(q.title)}</div>
       ${q.tms ? `<div class="fuse" title="Standard: ${(q.tms / 1000).toFixed(1)}s"><i id="fuseBar" style="animation-duration:${q.tms}ms"></i></div>` : ""}
-      ${q.auto ? `<form class="slotform" id="numForm" autocomplete="off"><div class="slots" id="slots">${slots}</div><input id="numIn" class="slot-input" inputmode="decimal" autocomplete="off" aria-label="Your answer, ${q.auto} digits"></form>`
+      ${q.auto ? `<form class="factform" id="numForm" autocomplete="off"><input id="numIn" class="fact-in" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit === "%" ? `<span class="fact-unit">%</span>` : ""}</form>`
       : `<form class="numrow" id="numForm" autocomplete="off">
         <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m"}" aria-label="Your answer">
         <button class="btn primary" type="submit">Submit</button>
@@ -1682,16 +1675,11 @@ function renderQuestion() {
       <div id="fbslot"></div>`;
     const inp = $("#numIn"); inp.focus();
     $("#numForm").addEventListener("submit", e => { e.preventDefault(); answerNum(q.auto ? slotValue(q, inp.value) : inp.value); });
-    if (q.auto) {
-      $("#slots").addEventListener("click", () => inp.focus());
-      inp.addEventListener("input", () => {
-        const d = inp.value.replace(/\D/g, "").slice(0, q.auto);
-        if (inp.value !== d) inp.value = d;
-        $("#slots").querySelectorAll(".slot").forEach((el, i) => { el.textContent = d[i] || ""; el.classList.toggle("filled", i < d.length); el.classList.toggle("next", i === d.length); });
-        if (d.length >= q.auto) answerNum(slotValue(q, d));
-      });
-      inp.dispatchEvent(new Event("input"));
-    }
+    if (q.auto) inp.addEventListener("input", () => {
+      const clean = inp.value.replace(/[^\d.]/g, "");
+      if (inp.value !== clean) inp.value = clean;
+      if ((clean.match(/\d/g) || []).length >= q.auto) answerNum(slotValue(q, clean));
+    });
   } else if (q.type === "tap") {
     q.sel = new Set();
     st.innerHTML = `<span class="eyebrow">Case prompt</span>
@@ -1763,7 +1751,7 @@ function answerNum(v) {
   const r = record(ok ? 1 : 0);
   const shown = q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
   const fb = $("#fuseBar"); if (fb) fb.style.animationPlayState = "paused";
-  const sl = $("#slots"); if (sl) sl.classList.add(ok ? "ok" : "no");
+  const fi = $(".fact-in"); if (fi) fi.classList.add(ok ? "ok" : "no");
   const fast = q.tms && r.ms <= q.tms;
   if (!ok && q.c && S.sprint && S.mode !== "boss") S.reask.push({ c: q.c, f: q.f, due: S.queue.length + ri(2, 3) });
   let bossMsg = "", delay = ok ? (fast ? 420 : 650) : q.tip ? 2600 : 1600;
