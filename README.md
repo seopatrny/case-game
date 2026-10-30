@@ -12,10 +12,35 @@ A short-session drill game for MBB case interview prep (McKinsey BA / Bain). Ope
 | Three-Sentence Close | Recommendation discipline: pick the best close, then write your own (auto-graded) | 4 rounds |
 | Bucket Sharpener | Sub-bucket specificity: swap generic points for metric + mechanism + cause | 8 calls |
 | Lingo Lightning | Industry vocabulary sprint | 60 s |
-| Math Sprint | Mental math: %, big-number ×/÷, breakeven, growth | 90 s |
+| Math Gym | Ten fluency categories, each with a 60 s timed check (see below) | 60 s |
+| Mixed Math Sprint | All Math Gym categories, weighted toward your weakest | 90 s |
 | Problem Solving | Multi-step case math with worked solutions | 4 problems |
 
 Exhibits and math are generated fresh each round, so the numbers are never the same twice.
+
+## Math Gym
+
+| Tier | Category | Standard (correct/min) | Accuracy |
+|---|---|---|---|
+| 1 · Facts | Times tables 2–12 | 30 | 95% |
+| 1 · Facts | Fractions ↔ percents | 25 | 95% |
+| 1 · Facts | Squares 11–25 | 20 | 95% |
+| 1 · Facts | 2-digit × 1-digit | 15 | 95% |
+| 2 · Case ops | Big numbers & zeros | 12 | 95% |
+| 2 · Case ops | Percent of | 12 | 95% |
+| 2 · Case ops | Division (2 sig figs) | 10 | 90% |
+| 2 · Case ops | % change & growth | 8 | 90% |
+| 2 · Case ops | Margins & breakeven | 6 | 90% |
+| 2 · Case ops | Compounding & CAGR | 6 | 90% |
+
+Tier 1 standards follow basic-fact fluency research (about 30–40 correct/min predicts success on harder
+multi-step work; Miller & Heward 1992 as cited by Rocket Math), scaled down for longer typed answers.
+Tier 2 standards follow case-prep guidance of about 5 s per simple percentage and under 10 s per calculation step.
+
+Every answer is tracked per fact (e.g. `7×8`, `3/8`, `M×K`). The Math Gym screen shows a fluency ladder
+(rate = median of the last three 60 s checks), a times-table heat map, fact tables for every category,
+a weakest-facts list you can drill directly, a recommended next category, and a strategy note for each
+category. Drills serve slow and missed facts more often.
 
 ## Progress tracking
 

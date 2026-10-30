@@ -51,6 +51,7 @@ body {
   padding-block: 18px 48px;
 }
 .wrap { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.wrap .wrap { max-width: none; margin: 0; }
 h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.1; }
 h2 { font-size: 1.35rem; font-weight: 700; }
 h3 { font-size: 1.05rem; font-weight: 700; }
@@ -232,7 +233,53 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .review div { display: flex; gap: 8px; }
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
 
+/* math gym */
+.small { font-size: .8rem; }
+.btn.sm { padding: 5px 11px; font-size: .82rem; }
+.gymdots { display: flex; gap: 4px; flex-wrap: wrap; }
+.gd { width: 22px; height: 8px; border-radius: 3px; background: var(--line); }
+.gd.ready { background: var(--good); }
+.gd.close { background: var(--accent); }
+.gd.below { background: var(--bad); }
+.gd.untimed { background: var(--muted); }
+.ladder td { vertical-align: top; }
+.ladder tr.tier td { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--muted); background: var(--surface-2); padding: 6px 8px; }
+.ladder .acts { white-space: nowrap; display: flex; gap: 10px; align-items: center; }
+.cpmcell { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+.cpmbar { position: relative; height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px; }
+.cpmbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--muted); }
+.cpmbar i.ready { background: var(--good); }
+.cpmbar i.close { background: var(--accent); }
+.cpmbar i.below { background: var(--bad); }
+.cpmbar .tick { position: absolute; left: 80%; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.strat-row td { background: var(--surface-2); }
+.strat-row ul { margin: 4px 0 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.nextup { display: flex; gap: 10px; align-items: center; }
+.facts-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.facts-layout .row, .fpanel .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.heat { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .68rem; }
+.heat .hh { display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--muted); aspect-ratio: 1; }
+.hc { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 3px; background: var(--surface-2); color: var(--muted); max-width: 100%; }
+.hc.fast, .fchip.fast { background: var(--good-soft); color: var(--good); }
+.hc.slow, .fchip.slow { background: color-mix(in srgb, var(--hl) 60%, var(--surface)); color: var(--hl-ink); }
+.hc.miss, .fchip.miss { background: var(--bad-soft); color: var(--bad); }
+.fpanels { display: grid; gap: 14px; }
+.fpanel { display: flex; flex-direction: column; gap: 6px; }
+.fpanel h3 { font-size: .92rem; }
+.fchips { display: flex; flex-wrap: wrap; gap: 4px; }
+.fchip { display: inline-block; font-size: .74rem; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.fchip.fast, .fchip.slow, .fchip.miss { border-color: transparent; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i.fchip { width: 14px; height: 12px; padding: 0; }
+.neg { color: var(--bad); }
+.std { border-radius: 8px; padding: 10px 14px; border: 1px solid var(--line); background: var(--surface-2); }
+.std.met { border-color: var(--good); background: var(--good-soft); }
+.standards p { max-width: 75ch; font-size: .92rem; }
+.standards a { color: var(--accent); }
+
 @media (max-width: 680px) {
+  .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
   .mode-math { grid-template-columns: 1fr; }
   .big { grid-template-columns: repeat(2, 1fr); }
@@ -365,10 +412,16 @@ const MODES = {
   close:   { name: "Three-Sentence Close", skill: "close", tag: "Gap 3", blurb: "Answer, two reasons with numbers, risk and next step. Sentence four gets you fined.", len: "4 rounds · ~5 min" },
   bucket:  { name: "Bucket Sharpener", skill: "bucket", tag: "Gap 4", blurb: "Trade \"competition increased\" for \"NIM compression from fintech deposit rates.\"", len: "8 calls · ~3 min" },
   lingo:   { name: "Lingo Lightning", skill: "lingo", tag: "Vocab", blurb: "60 seconds of terms and definitions. NIM, CAC, RevPAR, take rate.", len: "60 s sprint" },
-  math:    { name: "Math Sprint", skill: "math", tag: "Math", blurb: "90 seconds of percentages, big-number multiplication, breakevens and growth.", len: "90 s sprint" },
+  math:    { name: "Mixed Math Sprint", skill: "math", tag: "Math", blurb: "90 seconds across all ten Math Gym categories, weighted toward your weakest.", len: "90 s sprint" },
   problem: { name: "Problem Solving", skill: "problem", tag: "Math", blurb: "Multi-step case math: market sizing, payback, LTV, margin targets, NII.", len: "4 problems · ~6 min" },
   daily:   { name: "Daily Shift", skill: null, tag: "Mixed", blurb: "", len: "~12 items · ~7 min" },
 };
+function modeName(m) {
+  if (MODES[m]) return MODES[m].name;
+  if (m && m.startsWith("m:") && MATH_CATS[m.slice(2)]) return MATH_CATS[m.slice(2)].name + " check";
+  if (m === "weak") return "Weak-fact drill";
+  return m;
+}
 const RANKS = [
   [0, "Summer Intern"], [300, "Business Analyst"], [900, "Senior BA"], [1800, "Associate"],
   [3200, "Engagement Manager"], [5200, "Associate Partner"], [8000, "Partner"], [12000, "Senior Partner"], [18000, "Managing Partner"]
@@ -718,25 +771,220 @@ function lingoItem() {
 }
 
 /* ============================================================
-   CONTENT: Math Sprint (procedural)
+   CONTENT: Math Gym — fluency categories
+   Each category has a finite list of "facts" (a single fact, or a
+   problem subtype) so we can track speed and accuracy per fact and
+   steer practice toward the slow and missed ones.
+   cpm = correct-per-minute standard for a 60 s timed check.
    ============================================================ */
-const MATH_GENS = [
-  () => { const p = pick([5, 12, 15, 18, 25, 35, 40, 45, 60, 75]); const b = pick([2.4, 3.6, 4.8, 8, 12, 16, 24, 1.8]) * pick([1e6, 1e9]); return { q: `${p}% of ${fmtNum(b)}`, a: p / 100 * b }; },
-  () => { const a = ri(4, 18) * 10, ch = pick([-25, -20, -15, -12, -8, 10, 12, 15, 20, 25, 30, 40]); const b = Math.round(a * (1 + ch / 100)); return { q: `% change from ${a} to ${b}`, a: (b - a) / a * 100, unit: "%" }; },
-  () => { const x = pick([12, 15, 25, 35, 45, 60, 80]) * 1e6, y = pick([30, 40, 120, 250, 1.5e3, 2e3]); return { q: `${fmtNum(x)} × ${fmtNum(y)}`, a: x * y }; },
-  () => { const y = pick([12, 15, 20, 25, 40, 60, 80]) * 1e6, k = pick([30, 45, 120, 150, 250, 400]); return { q: `${fmtNum(y * k)} ÷ ${fmtNum(y)}`, a: k }; },
-  () => { const r = pick([120, 250, 400, 640, 800, 1200]), m = pick([6, 8, 12, 15, 18, 22, 30]); const p = r * m / 100; return { q: `Revenue $${r}M, profit $${fmtNum(p)}M. Margin?`, a: m, unit: "%" }; },
-  () => { const f = pick([6, 8, 9, 12, 15, 18, 24]), price = pick([30, 40, 50, 60, 80]), vc = price - pick([10, 12, 15, 20, 25].filter(x => x < price)); return { q: `Fixed costs $${f}M, price $${price}, variable cost $${vc}. Breakeven units?`, a: f * 1e6 / (price - vc) }; },
-  () => { const fr = pick([[1, 8], [3, 8], [1, 6], [5, 6], [1, 7], [2, 3], [1, 12], [3, 16], [5, 8], [1, 9]]); return { q: `${fr[0]}/${fr[1]} as a %`, a: fr[0] / fr[1] * 100, unit: "%", tol: .015 }; },
-  () => { const g = pick([4, 6, 8, 9, 12, 18, 24]); return { q: `Growing ${g}% a year, years to double? (rule of 72)`, a: 72 / g, tol: .05 }; },
-  () => { const b = pick([100, 200, 250, 400, 500]), g = pick([5, 8, 10, 12, 15]), n = pick([2, 3]); return { q: `$${b}M growing ${g}%/yr for ${n} years`, a: b * Math.pow(1 + g / 100, n) * 1e6, tol: .025 }; },
-  () => { const pop = 330e6, share = pick([10, 20, 25, 40]), freq = pick([2, 4, 12]); return { q: `${share}% of 330M people buy ${freq}× a year. Purchases per year?`, a: pop * share / 100 * freq }; },
-  () => { const a = pick([0.6, 0.8, 1.2, 1.5, 2.5]) * 1e9, b = pick([3, 4, 6, 8, 12, 15, 20]); return { q: `${fmtNum(a)} ÷ ${b}%`, a: a / (b / 100), tol: .02 }; },
-  () => { const base = pick([40, 60, 80, 120]), up = pick([10, 20, 25, 50]), dn = pick([10, 20, 25]); return { q: `Up ${up}%, then down ${dn}%. Net % change?`, a: ((1 + up / 100) * (1 - dn / 100) - 1) * 100, unit: "%", tol: .02, abs: 0.6 }; },
-];
-function mathItem() {
-  const g = pick(MATH_GENS)();
-  return { skill: "math", type: "num", sprint: true, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol || .01, abs: g.abs || 0 };
+const UNITS = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 };
+const FRACS = ["1/2", "1/3", "2/3", "1/4", "3/4", "1/5", "2/5", "3/5", "4/5", "1/6", "5/6", "1/7", "2/7", "3/7", "1/8", "3/8", "5/8", "7/8", "1/9", "2/9", "4/9", "1/11", "1/12", "5/12", "1/16", "3/16", "1/20", "1/40"];
+const MATH_CATS = {
+  mult: {
+    name: "Times tables 2–12", tier: 1, cpm: 30, acc: .95,
+    blurb: "Every product up to 12 × 12, recalled rather than computed.",
+    strat: ["Recall, don't compute: the goal is under 2 seconds per fact. If you are counting up, that fact needs reps.", "Hard facts lean on anchors: ×9 = ×10 minus one group (7×9 = 70 − 7); ×12 = ×10 plus ×2.", "Drill the slow cells in the heat map below. Most people's gaps cluster in 6–8 × 6–9."],
+    facts() { const o = []; for (let a = 2; a <= 12; a++) for (let b = a; b <= 12; b++) o.push(a + "×" + b); return o; },
+    make(f) {
+      const [a, b] = f.split("×").map(Number); const [x, y] = Math.random() < .5 ? [a, b] : [b, a];
+      const tip = b === 11 || b === 12 ? `${a}×${b} = ${a}×10 + ${a}×${b - 10}` : b >= 6 && b <= 9 ? `${a}×${b} = ${a}×10 − ${a}×${10 - b}` : `${a}×${b} = ${a * b}`;
+      return { q: `${x} × ${y}`, a: a * b, tol: 0, tip };
+    }
+  },
+  sq: {
+    name: "Squares 11–25", tier: 1, cpm: 20, acc: .95,
+    blurb: "Squares show up in growth, area-style sizing and the near-square trick.",
+    strat: ["Memorize 11²–25². They unlock fast products like 23 × 27 = 25² − 2² = 621.", "Near a round number: n² = (n − k)(n + k) + k². 23² = 20 × 26 + 9 = 529.", "Ending in 5: take the tens digit t, compute t × (t + 1), then append 25. 35² → 3 × 4 = 12 → 1225."],
+    facts() { const o = []; for (let n = 11; n <= 25; n++) o.push(n + "²"); return o; },
+    make(f) {
+      const n = parseInt(f), k = n - Math.round(n / 10) * 10, t = Math.floor(n / 10);
+      const tip = n % 10 === 5 ? `${t}×${t + 1} = ${t * (t + 1)}, append 25 → ${n * n}` : `${n}² = ${n - k}×${n + k} + ${k * k} = ${n * n}`;
+      return { q: `${n}²`, a: n * n, tol: 0, tip };
+    }
+  },
+  frac: {
+    name: "Fractions ↔ percents", tier: 1, cpm: 25, acc: .95,
+    blurb: "The conversion table that turns hard division into a lookup.",
+    strat: ["Memorize the unit fractions: 1/6 = 16.7%, 1/7 = 14.3%, 1/8 = 12.5%, 1/9 = 11.1%, 1/11 = 9.1%, 1/12 = 8.3%.", "Build the rest by multiplying: 3/8 = 3 × 12.5% = 37.5%; 5/6 = 100% − 16.7%.", "Run it backwards in a case: 'margin is 14%' → about 1/7 of revenue. Dividing by 7 is easier than multiplying by 0.14."],
+    facts() { return FRACS; },
+    make(f) {
+      const [n, d] = f.split("/").map(Number); const p = n / d * 100;
+      const tip = `1/${d} = ${(100 / d).toFixed(1)}%${n > 1 ? ` → ×${n} = ${p.toFixed(1)}%` : ""}`;
+      if (Math.random() < .7) return { q: `${n}/${d} as a %`, a: p, unit: "%", tol: 0, abs: .2, tip };
+      return { q: `${+p.toFixed(1)}% = ? / ${d}`, a: n, tol: 0, tip };
+    }
+  },
+  mult2: {
+    name: "2-digit × 1-digit", tier: 1, cpm: 15, acc: .95,
+    blurb: "The workhorse step inside nearly every case multiplication.",
+    strat: ["Break apart left to right: 47 × 6 = 40 × 6 + 7 × 6 = 240 + 42 = 282.", "Round and fix: 58 × 7 = 60 × 7 − 2 × 7 = 406.", "Special multipliers: ×5 = ×10 ÷ 2, ×25 = ×100 ÷ 4, ×15 = ×10 plus half, ×11: add the two digits and put the sum in the middle."],
+    facts() { return ["×3", "×4", "×6", "×7", "×8", "×9", "×11", "×12", "×15", "×25"]; },
+    make(f) {
+      const d = parseInt(f.slice(1)); let n = ri(13, 98); if (n % 10 === 0) n++;
+      const t = Math.floor(n / 10) * 10, o = n % 10;
+      const tip = d === 25 ? `${n}×25 = ${n}×100 ÷ 4` : d === 15 ? `${n}×15 = ${n * 10} + ${n * 5}` : d === 11 ? `${n}×11 = ${n}×10 + ${n}` : `${n}×${d} = ${t}×${d} + ${o}×${d} = ${t * d} + ${o * d}`;
+      return { q: `${n} × ${d}`, a: n * d, tol: 0, tip };
+    }
+  },
+  zeros: {
+    name: "Big numbers & zeros", tier: 2, cpm: 12, acc: .95,
+    blurb: "Thousands, millions, billions. The most common source of case math errors.",
+    strat: ["Split digits from zeros: 30M × 4K → 3 × 4 = 12, zeros 7 + 3 = 10 → 120B.", "Know the ladders: K × K = M, M × K = B, M × M = T, B ÷ M = K.", "Sanity-check every answer against something you know: US population ~330M, US GDP ~$28T."],
+    facts() { return ["K×K", "M×K", "M×M", "B×K", "B÷M", "M÷K", "B÷K", "T÷B"]; },
+    make(f) {
+      const small = [2, 3, 4, 5, 6, 8, 12, 15, 20, 25, 40, 60, 80];
+      const u1 = f[0], u2 = f[2], op = f[1];
+      if (op === "×") {
+        const a = pick(small), b = pick(small);
+        return { q: `${a}${u1} × ${b}${u2}`, a: a * UNITS[u1] * b * UNITS[u2], tol: .005, strict: true, tip: `${a} × ${b} = ${a * b}, then ${u1} × ${u2} = 10^${Math.log10(UNITS[u1] * UNITS[u2])}` };
+      }
+      const r = pick(small), b = pick(small);
+      const dividend = r * b * UNITS[u1];
+      return { q: `${fmtNum(dividend)} ÷ ${b}${u2}`, a: dividend / (b * UNITS[u2]), tol: .005, strict: true, tip: `${fmtNum(dividend / UNITS[u1])} ÷ ${b} = ${r}, then ${u1} ÷ ${u2} = 10^${Math.log10(UNITS[u1] / UNITS[u2])}` };
+    }
+  },
+  pctof: {
+    name: "Percent of", tier: 2, cpm: 12, acc: .95,
+    blurb: "Margins, shares and growth amounts. Target is under 5 seconds each.",
+    strat: ["Anchor on 10% and 1%, then build: 15% = 10% + half of it; 35% = 25% + 10%; 45% = 50% − 5%.", "Use fractions: 12.5% = 1/8, 25% = 1/4, 75% = 3/4.", "Swap when it's easier: 8% of 50 = 50% of 8 = 4."],
+    facts() { return ["1%", "5%", "10%", "15%", "20%", "25%", "30%", "35%", "40%", "45%", "60%", "75%", "12.5%", "2.5%", "8%", "0.5%"]; },
+    make(f) {
+      const p = parseFloat(f); const base = pick([40, 60, 80, 120, 240, 360, 480, 640, 720, 840, 1200, 1600, 2400, 3600, 4800]) * pick([1, 1e3, 1e6, 1e6]);
+      const tips = { 15: "10% + half of 10%", 35: "25% + 10%", 45: "50% − 5%", 12.5: "÷ 8", 2.5: "10% ÷ 4", 0.5: "1% ÷ 2", 75: "base − 25%", 8: "swap: base% of 8", 30: "10% × 3", 60: "50% + 10%", 40: "50% − 10%" };
+      return { q: `${f} of ${fmtNum(base)}`, a: p / 100 * base, tol: .01, tip: `${f}: ${tips[p] || "anchor on 10% / 1%"} → ${fmtNum(p / 100 * base)}` };
+    }
+  },
+  div: {
+    name: "Division (2 sig figs)", tier: 2, cpm: 10, acc: .9,
+    blurb: "Per-unit numbers, payback, share of total. Two significant figures is enough.",
+    strat: ["Cancel zeros first: 4,800 ÷ 60 = 480 ÷ 6 = 80.", "Turn awkward divisors into friendly ones: ÷25 = ×4 ÷ 100; ÷15 = ÷3 then ÷5; ÷45 = ×2 ÷ 90.", "Estimate to two significant figures and say so. 'About 57' is a good answer to 400 ÷ 7."],
+    facts() { return ["÷3", "÷4", "÷6", "÷7", "÷8", "÷9", "÷12", "÷15", "÷25", "÷45", "÷60", "÷75"]; },
+    make(f) {
+      const d = parseInt(f.slice(1)); const scale = pick([1, 10, 1000]);
+      const dividend = roundTo(d * ri(12, 95) * rnd(.93, 1.07), d > 20 ? 5 : 1) * scale;
+      const tips = { 25: "×4 then ÷100", 15: "÷3 then ÷5", 45: "×2 then ÷90", 75: "×4 then ÷300", 12: "÷3 then ÷4", 6: "÷2 then ÷3", 7: "×1/7 ≈ 14.3%", 9: "×1/9 ≈ 11.1%", 60: "÷6 then ÷10", 8: "halve three times" };
+      return { q: `${fmtNum(dividend)} ÷ ${d}`, a: dividend / d, tol: .02, tip: `÷${d}: ${tips[d] || "cancel zeros, then divide"} → ≈ ${fmtNum(dividend / d)}` };
+    }
+  },
+  pchg: {
+    name: "% change & growth", tier: 2, cpm: 8, acc: .9,
+    blurb: "Growth rates, declines, backing out a base, and points versus percent.",
+    strat: ["% change = (new − old) ÷ old. Always divide by the old number.", "Back out a base by dividing: after +25%, $150M ÷ 1.25 = $120M (not $150M × 0.75).", "Stacked changes multiply: +20% then −20% = 1.2 × 0.8 = 0.96, so −4%. Percentage points are not percent: 8% → 10% is +2 pts, or +25%."],
+    facts() { return ["up", "down", "base", "stack", "ppts"]; },
+    make(f) {
+      if (f === "up" || f === "down") {
+        const a = ri(4, 18) * 10, g = pick([5, 8, 10, 12, 15, 20, 25, 30, 40, 50]) * (f === "down" ? -1 : 1); const b = Math.round(a * (1 + g / 100));
+        return { q: `${a} → ${b}: % change?`, a: (b - a) / a * 100, unit: "%", tol: .02, abs: .3, tip: `(${b} − ${a}) ÷ ${a} = ${((b - a) / a * 100).toFixed(1)}%` };
+      }
+      if (f === "base") {
+        const prior = pick([80, 120, 160, 200, 240, 400]), g = pick([20, 25, 50, 60]); const now = prior * (1 + g / 100);
+        return { q: `After +${g}% growth, revenue is $${now}M. Prior year?`, a: prior * 1e6, tol: .01, tip: `$${now}M ÷ ${1 + g / 100} = $${prior}M` };
+      }
+      if (f === "stack") {
+        const u = pick([10, 20, 25, 50]), d = pick([10, 20, 25, 40]); const net = ((1 + u / 100) * (1 - d / 100) - 1) * 100;
+        return { q: `Up ${u}%, then down ${d}%. Net % change?`, a: net, unit: "%", tol: .02, abs: .3, tip: `${1 + u / 100} × ${1 - d / 100} = ${(1 + net / 100).toFixed(3)} → ${net.toFixed(1)}%` };
+      }
+      const m1 = pick([4, 5, 8, 10, 12, 20]), m2 = m1 + pick([1, 2, 3, 4, 5]);
+      return { q: `Margin goes from ${m1}% to ${m2}%. Growth in percent (not points)?`, a: (m2 - m1) / m1 * 100, unit: "%", tol: .02, abs: .3, tip: `${m2 - m1} pts ÷ ${m1} = ${((m2 - m1) / m1 * 100).toFixed(1)}%` };
+    }
+  },
+  be: {
+    name: "Margins & breakeven", tier: 2, cpm: 6, acc: .9,
+    blurb: "The profitability toolkit: margin, contribution, breakeven, payback, pricing to a margin.",
+    strat: ["Breakeven units = fixed costs ÷ (price − variable cost per unit).", "Payback = investment ÷ annual cash flow. Margin = profit ÷ revenue.", "Price for a target margin = cost ÷ (1 − margin). A 25% margin on a $60 cost is $80, not $75."],
+    facts() { return ["margin", "breakeven", "contrib", "payback", "markup"]; },
+    make(f) {
+      if (f === "margin") { const r = pick([120, 250, 400, 640, 800, 1200]), m = pick([6, 8, 12, 15, 18, 22, 30]); return { q: `Revenue $${r}M, profit $${fmtNum(r * m / 100)}M. Margin?`, a: m, unit: "%", tol: .02, tip: `${fmtNum(r * m / 100)} ÷ ${r} = ${m}%` }; }
+      if (f === "breakeven") { const F = pick([6, 8, 9, 12, 15, 18, 24]), p = pick([30, 40, 50, 60, 80]), c = pick([10, 12, 15, 20, 25].filter(x => x < p)); return { q: `Fixed $${F}M, price $${p}, variable cost $${p - c}. Breakeven units?`, a: F * 1e6 / c, tol: .02, tip: `$${F}M ÷ $${c} contribution = ${fmtNum(F * 1e6 / c)}` }; }
+      if (f === "contrib") { const p = pick([40, 50, 80, 120, 200]), m = pick([20, 25, 30, 35, 40, 60]); return { q: `Price $${p}, variable cost $${p * (1 - m / 100)}. Contribution margin %?`, a: m, unit: "%", tol: .02, tip: `($${p} − $${p * (1 - m / 100)}) ÷ $${p} = ${m}%` }; }
+      if (f === "payback") { const s = pick([1.5, 2, 2.5, 3, 4, 5]), y = pick([2, 2.5, 3, 4, 5, 6]); return { q: `Invest $${fmtNum(s * y)}M, saves $${s}M a year. Payback years?`, a: y, unit: "yrs", tol: .03, tip: `$${fmtNum(s * y)}M ÷ $${s}M = ${y} years` }; }
+      const c = pick([30, 45, 60, 75, 90, 120]), m = pick([20, 25, 40, 50]); return { q: `Cost $${c}. Price for a ${m}% margin?`, a: c / (1 - m / 100), tol: .02, tip: `$${c} ÷ (1 − ${m}%) = $${fmtNum(c / (1 - m / 100))}` };
+    }
+  },
+  cagr: {
+    name: "Compounding & CAGR", tier: 2, cpm: 6, acc: .9,
+    blurb: "Projecting forward and backing out growth rates without a calculator.",
+    strat: ["Rule of 72: doubling time ≈ 72 ÷ growth rate. 9% → 8 years.", "Two years at g: multiply by (1 + g)² = 1 + 2g + g². 10% → 1.21.", "Approximate CAGR: total growth ÷ years, then trim a little. 100 → 150 in 4 years is ~12.5% simple, actual ~10.7%."],
+    facts() { return ["72", "2yr", "3yr", "cagr"]; },
+    make(f) {
+      if (f === "72") { const g = pick([4, 6, 8, 9, 12, 18, 24]); return { q: `Growing ${g}% a year. Years to double?`, a: 72 / g, unit: "yrs", tol: .06, tip: `72 ÷ ${g} = ${fmtNum(72 / g)}` }; }
+      if (f === "2yr" || f === "3yr") { const n = f === "2yr" ? 2 : 3, b = pick([100, 200, 250, 400, 500]), g = pick([5, 8, 10, 12, 15, 20]); const a = b * Math.pow(1 + g / 100, n); return { q: `$${b}M growing ${g}% a year. Value in ${n} years?`, a: a * 1e6, tol: .025, tip: `$${b}M × ${(1 + g / 100).toFixed(2)}^${n} ≈ $${fmtNum(a)}M` }; }
+      const b = pick([100, 200, 400]), mult = pick([1.21, 1.44, 1.5, 2]), n = pick([2, 3, 4]); const a = (Math.pow(mult, 1 / n) - 1) * 100;
+      return { q: `$${b}M → $${fmtNum(b * mult)}M in ${n} years. Approx CAGR?`, a, unit: "%", tol: .08, abs: .8, tip: `(${mult})^(1/${n}) − 1 ≈ ${a.toFixed(1)}%` };
+    }
+  },
+};
+const CAT_KEYS = Object.keys(MATH_CATS);
+
+function catItem(c, f) {
+  const C = MATH_CATS[c]; const g = C.make(f);
+  return { skill: "math", type: "num", sprint: true, c, f, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol, abs: g.abs || 0, strict: !!g.strict, tip: g.tip, label: C.name };
+}
+
+// Per-fact and per-category statistics from every math item ever answered.
+function gymStats() {
+  const facts = {}, cats = {};
+  for (const k of CAT_KEYS) cats[k] = { items: [], checks: [] };
+  for (const r of Store.recs) {
+    for (const it of r.items) {
+      if (!it.c || !cats[it.c]) continue;
+      cats[it.c].items.push(it);
+      (facts[it.c + "|" + it.f] = facts[it.c + "|" + it.f] || []).push(it);
+    }
+    if (r.mode && r.mode.startsWith("m:") && cats[r.mode.slice(2)] && (r.dur || 0) >= 45) {
+      const corr = r.items.filter(i => i.ok >= 1).length;
+      cats[r.mode.slice(2)].checks.push({ ts: r.ts, cpm: corr / (r.dur / 60), acc: r.items.length ? corr / r.items.length : 0 });
+    }
+  }
+  for (const k of CAT_KEYS) {
+    const C = MATH_CATS[k], o = cats[k], recent = o.items.slice(-40);
+    o.n = o.items.length;
+    o.acc = recent.length ? recent.filter(i => i.ok >= 1).length / recent.length : null;
+    const ms = recent.map(i => i.ms).sort((a, b) => a - b);
+    o.med = ms.length ? ms[Math.floor(ms.length / 2)] : null;
+    const last3 = o.checks.slice(-3).map(c => c.cpm).sort((a, b) => a - b);
+    o.cpm = last3.length ? last3[Math.floor(last3.length / 2)] : null;
+    o.best = o.checks.length ? Math.max(...o.checks.map(c => c.cpm)) : null;
+    if (!o.n) o.status = "none";
+    else if (o.cpm == null) o.status = "untimed";
+    else if (o.cpm >= C.cpm && o.acc >= C.acc) o.status = "ready";
+    else if (o.cpm >= C.cpm * .7 && o.acc >= C.acc - .05) o.status = "close";
+    else o.status = "below";
+    o.gap = o.status === "ready" ? 0 : o.cpm == null ? 1 : Math.max(0, 1 - o.cpm / C.cpm) + Math.max(0, C.acc - (o.acc || 0)) * 2;
+  }
+  return { facts, cats };
+}
+function factState(gs, c, f) {
+  const a = (gs.facts[c + "|" + f] || []).slice(-6);
+  if (!a.length) return { st: "none", n: 0 };
+  const miss = a.filter(x => x.ok < 1).length / a.length;
+  const ms = a.reduce((s, x) => s + x.ms, 0) / a.length;
+  const tms = 60000 / MATH_CATS[c].cpm;
+  return { st: miss > .2 ? "miss" : ms > tms ? "slow" : "fast", n: (gs.facts[c + "|" + f] || []).length, miss, ms, tms, score: miss * 3 + ms / tms };
+}
+function weightedPick(arr, w) {
+  const tot = w.reduce((a, b) => a + b, 0); let x = Math.random() * tot;
+  for (let i = 0; i < arr.length; i++) { x -= w[i]; if (x <= 0) return arr[i]; }
+  return arr[arr.length - 1];
+}
+function pickFact(c, gs) {
+  const fs = MATH_CATS[c].facts();
+  return weightedPick(fs, fs.map(f => { const s = factState(gs, c, f); return s.st === "none" ? 2 : 0.5 + s.miss * 4 + clamp(s.ms / s.tms - 1, 0, 3); }));
+}
+function pickCat(gs) {
+  return weightedPick(CAT_KEYS, CAT_KEYS.map(k => { const o = gs.cats[k]; return (MATH_CATS[k].tier === 1 ? 1.3 : 1) * (0.3 + o.gap); }));
+}
+function mathItem(c, gs) {
+  gs = gs || gymStats(); c = c || pickCat(gs);
+  return catItem(c, pickFact(c, gs));
+}
+function focusList(gs) {
+  return CAT_KEYS.filter(k => gs.cats[k].status !== "ready")
+    .map(k => ({ k, score: (MATH_CATS[k].tier === 1 ? 1.4 : 1) * (gs.cats[k].status === "none" || gs.cats[k].status === "untimed" ? 1.1 : gs.cats[k].gap) }))
+    .sort((a, b) => b.score - a.score).map(x => x.k);
+}
+function slowFacts(gs, c, n) {
+  return MATH_CATS[c].facts().map(f => ({ f, ...factState(gs, c, f) })).filter(x => x.st === "slow" || x.st === "miss").sort((a, b) => b.score - a.score).slice(0, n);
 }
 
 /* ============================================================
@@ -934,16 +1182,27 @@ function buildQueue(mode) {
   return [];
 }
 
-function startSession(mode) {
-  const sprint = mode === "math" ? 90 : mode === "lingo" ? 60 : 0;
-  S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [] };
-  if (sprint) { S.endAt = Date.now() + sprint * 1000; S.queue.push(mode === "math" ? mathItem() : lingoItem()); }
+function startSession(mode, opts = {}) {
+  const sprint = mode === "math" ? 90 : mode === "lingo" || mode === "weak" || mode.startsWith("m:") ? 60 : 0;
+  S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [], weak: opts.weak || null, gs: gymStats(), startTs: Date.now() };
+  if (sprint) { S.endAt = Date.now() + sprint * 1000; S.queue.push(sprintItem()); }
   renderGame();
   if (sprint) tickTimer();
   scrollTo(0, 0);
 }
 
 function current() { return S.queue[S.idx]; }
+function sprintItem() {
+  const m = S.mode, prev = S.queue[S.queue.length - 1];
+  const gen = () => {
+    if (m === "lingo") return lingoItem();
+    if (m === "math") return mathItem(null, S.gs);
+    if (m === "weak") { const [c, f] = pick(S.weak).split("|"); return catItem(c, f); }
+    const c = m.slice(2); return catItem(c, pickFact(c, S.gs));
+  };
+  let q = gen(); if (prev && q.title === prev.title) q = gen();
+  return q;
+}
 
 function record(ok, extra) {
   const q = current(), ms = Date.now() - S.qStart;
@@ -954,7 +1213,9 @@ function record(ok, extra) {
   const target = SKILLS[q.skill].target;
   const gained = Math.round(okv * 10 + (full && ms <= target ? 5 : 0) + (full ? Math.min(S.combo, 10) : 0));
   S.xp += gained;
-  S.items.push({ s: q.skill, ok: +okv.toFixed(2), ms });
+  const it = { s: q.skill, ok: +okv.toFixed(2), ms };
+  if (q.c) { it.c = q.c; it.f = q.f; }
+  S.items.push(it);
   S.results.push({ q, ok: okv, ms, extra });
   updateHud(gained);
   return { okv, full, ms, gained };
@@ -964,7 +1225,7 @@ function next() {
   if (!S) return;
   if (S.sprint) {
     if (Date.now() >= S.endAt) return finish();
-    S.queue.push(S.mode === "math" ? mathItem() : lingoItem());
+    S.queue.push(sprintItem());
   }
   S.idx++;
   if (S.idx >= S.queue.length) return finish();
@@ -986,7 +1247,7 @@ function totals() {
   return { xp, streak, todayCount: today.length, todayXp: today.reduce((a, r) => a + r.xp, 0), items, sessions: Store.recs.length };
 }
 
-function sparkSVG(points, color) {
+function sparkSVG(points, color, labels) {
   const w = 96, h = 28, pad = 3;
   if (points.length < 2) return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><line x1="${pad}" x2="${w - pad}" y1="${h / 2}" y2="${h / 2}" stroke="var(--line)" stroke-dasharray="3 3"/></svg>`;
   const xs = i => pad + i * (w - 2 * pad) / (points.length - 1);
@@ -994,8 +1255,8 @@ function sparkSVG(points, color) {
   const d = points.map((v, i) => `${i ? "L" : "M"}${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join("");
   const area = d + `L${xs(points.length - 1).toFixed(1)},${h - pad}L${pad},${h - pad}Z`;
   const last = points[points.length - 1];
-  const dots = points.map((v, i) => `<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="6" fill="transparent"><title>Session ${i + 1}: ${pct(v)}</title></circle>`).join("");
-  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Accuracy over last ${points.length} sessions"><path d="${area}" fill="${color}" opacity=".12"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xs(points.length - 1).toFixed(1)}" cy="${ys(last).toFixed(1)}" r="3" fill="${color}"/>${dots}</svg>`;
+  const dots = points.map((v, i) => `<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="6" fill="transparent"><title>Session ${i + 1}: ${labels ? labels[i] : pct(v)}</title></circle>`).join("");
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Last ${points.length} sessions"><path d="${area}" fill="${color}" opacity=".12"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xs(points.length - 1).toFixed(1)}" cy="${ys(last).toFixed(1)}" r="3" fill="${color}"/>${dots}</svg>`;
 }
 
 const BADGES = [
@@ -1041,7 +1302,7 @@ function renderHome() {
   const recent = Store.recs.slice(-6).reverse().map(r => {
     const acc = r.items.length ? r.items.reduce((a, b) => a + b.ok, 0) / r.items.length : 0;
     const d = new Date(r.ts);
-    return `<tr><td>${MODES[r.mode] ? MODES[r.mode].name : r.mode}</td><td class="num">${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</td><td class="num">${pct(acc)}</td><td class="num">${r.items.length}</td><td class="num">+${r.xp}</td></tr>`;
+    return `<tr><td>${esc(modeName(r.mode))}</td><td class="num">${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</td><td class="num">${pct(acc)}</td><td class="num">${r.items.length}</td><td class="num">+${r.xp}</td></tr>`;
   }).join("");
 
   $("#view").innerHTML = `
@@ -1073,7 +1334,7 @@ function renderHome() {
 
     <section class="wrap" style="gap:12px">
       <div class="section-head"><h2>Math Gym</h2><span class="muted" style="font-size:.85rem">Type answers like 2.4m, 840k, 12% or 1.5b</span></div>
-      <div class="mode-math">${["math", "problem"].map(modeCard).join("")}</div>
+      <div class="mode-math">${gymCard()}${modeCard("problem")}</div>
     </section>
 
     <section class="card wrap" style="gap:12px">
@@ -1108,6 +1369,7 @@ function renderHome() {
   </div>`;
 
   $("#view").querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => startSession(b.dataset.mode)));
+  $("#view").querySelector("[data-gym]").addEventListener("click", renderGym);
   $("#backupBtn").addEventListener("click", () => {
     const box = $("#backupBox"); box.hidden = !box.hidden;
     $("#backupText").value = JSON.stringify(Store.recs);
@@ -1123,15 +1385,160 @@ function renderHome() {
 }
 
 /* ============================================================
+   Rendering: Math Gym dashboard
+   ============================================================ */
+const STATUS_LABEL = { none: "Not started", untimed: "Needs timed check", below: "Below standard", close: "Almost there", ready: "Case-ready" };
+const STATUS_PILL = { none: "new", untimed: "new", below: "work", close: "prog", ready: "mast" };
+const FACT_LABEL = {
+  up: "% increase", down: "% decrease", base: "Back out base", stack: "Stacked %", ppts: "Points vs %",
+  margin: "Margin", breakeven: "Breakeven", contrib: "Contribution", payback: "Payback", markup: "Price for margin",
+  "72": "Rule of 72", "2yr": "2-yr compound", "3yr": "3-yr compound", cagr: "Back out CAGR"
+};
+const factLabel = f => FACT_LABEL[f] || f;
+
+function gymCard() {
+  const gs = gymStats(), ready = CAT_KEYS.filter(k => gs.cats[k].status === "ready").length, f = focusList(gs)[0];
+  return `<button class="mode" type="button" data-gym>
+    <span class="row"><h3>Math Gym</h3><span class="tag">Math</span></span>
+    <p>Ten timed drills from times tables to CAGR, each with a correct-per-minute standard, per-fact heat maps, and a pick for what to drill next.</p>
+    <span class="gymdots" aria-hidden="true">${CAT_KEYS.map(k => `<i class="gd ${gs.cats[k].status}" title="${esc(MATH_CATS[k].name)}: ${STATUS_LABEL[gs.cats[k].status]}"></i>`).join("")}</span>
+    <span class="meta"><span><b class="num">${ready}</b>/${CAT_KEYS.length} at case-ready standard</span><span>${f ? "Focus: " + esc(MATH_CATS[f].name) : "Every standard met"}</span></span>
+  </button>`;
+}
+
+function focusReason(gs, k) {
+  const o = gs.cats[k], C = MATH_CATS[k];
+  if (o.status === "none") return C.tier === 1 ? "Not started. Tier 1 facts come first because every case calculation is built from them." : "Not started. Take a 60-second check to get a baseline.";
+  if (o.status === "untimed") return `${o.n} answered in mixed practice (${pct(o.acc)} accurate), but no timed check yet. One 60-second check sets your rate.`;
+  const sf = slowFacts(gs, k, 3).map(x => factLabel(x.f));
+  return `${o.cpm.toFixed(1)} correct/min against a standard of ${C.cpm} · ${pct(o.acc)} accurate (standard ${pct(C.acc)})${sf.length ? ` · slowest: ${sf.join(", ")}` : ""}`;
+}
+
+function renderGym() {
+  S = null; clearInterval(timerId); screen = "gym";
+  const gs = gymStats(), focus = focusList(gs), ready = CAT_KEYS.filter(k => gs.cats[k].status === "ready").length;
+  const f0 = focus[0];
+
+  const row = k => {
+    const C = MATH_CATS[k], o = gs.cats[k];
+    const max = C.cpm * 1.25, w = o.cpm == null ? 0 : Math.min(100, o.cpm / max * 100);
+    const checks = o.checks.slice(-8);
+    return `<tr>
+      <td><b>${esc(C.name)}</b><div class="muted small">${esc(C.blurb)}</div></td>
+      <td><span class="pill ${STATUS_PILL[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+      <td><div class="cpmcell"><div class="cpmbar" title="${o.cpm == null ? "No timed check yet" : o.cpm.toFixed(1) + " correct/min"}; standard ${C.cpm}"><i class="${o.status}" style="width:${w}%"></i><span class="tick"></span></div><span class="num">${o.cpm == null ? "—" : o.cpm.toFixed(1)}<span class="muted"> / ${C.cpm}</span></span></div></td>
+      <td class="num">${o.best == null ? "—" : o.best.toFixed(1)}</td>
+      <td class="num">${o.acc == null ? "—" : pct(o.acc)}<span class="muted"> / ${pct(C.acc)}</span></td>
+      <td class="num">${o.med == null ? "—" : (o.med / 1000).toFixed(1) + "s"}<span class="muted"> / ${(60 / C.cpm).toFixed(1)}s</span></td>
+      <td>${sparkSVG(checks.map(c => clamp(c.cpm / max, 0, 1)), "var(--accent)", checks.map(c => c.cpm.toFixed(1) + " correct/min"))}</td>
+      <td class="acts"><button class="btn sm primary" type="button" data-cat="${k}">Drill</button><button class="linkbtn" type="button" data-strat="${k}" aria-expanded="false">How</button></td>
+    </tr>
+    <tr class="strat-row" id="strat-${k}" hidden><td colspan="8"><span class="eyebrow">Strategy</span><ul>${C.strat.map(x => `<li>${esc(x)}</li>`).join("")}</ul></td></tr>`;
+  };
+  const tierRows = t => CAT_KEYS.filter(k => MATH_CATS[k].tier === t).map(row).join("");
+
+  // Times-table heat map
+  let heat = `<span class="hh">×</span>`;
+  for (let b = 2; b <= 12; b++) heat += `<span class="hh">${b}</span>`;
+  for (let a = 2; a <= 12; a++) {
+    heat += `<span class="hh">${a}</span>`;
+    for (let b = 2; b <= 12; b++) {
+      const key = Math.min(a, b) + "×" + Math.max(a, b), fs = factState(gs, "mult", key);
+      heat += `<span class="hc ${fs.st}" title="${a} × ${b} = ${a * b}${fs.n ? ` · avg ${(fs.ms / 1000).toFixed(1)}s · ${pct(1 - fs.miss)} recent accuracy · ${fs.n} tries` : " · not seen yet"}">${fs.n ? (fs.ms / 1000).toFixed(1) : ""}</span>`;
+    }
+  }
+  const panels = CAT_KEYS.filter(k => k !== "mult").map(k => {
+    const C = MATH_CATS[k];
+    return `<div class="fpanel"><div class="row"><h3>${esc(C.name)}</h3><button class="linkbtn" type="button" data-cat="${k}">Drill</button></div>
+      <div class="fchips">${C.facts().map(f => { const fs = factState(gs, k, f); return `<span class="fchip ${fs.st}" title="${esc(factLabel(f))}${fs.n ? ` · avg ${(fs.ms / 1000).toFixed(1)}s vs ${(fs.tms / 1000).toFixed(1)}s standard · ${pct(1 - fs.miss)} recent accuracy · ${fs.n} tries` : " · not seen yet"}">${esc(factLabel(f))}</span>`; }).join("")}</div></div>`;
+  }).join("");
+
+  // Weakest facts across every category
+  const weak = [];
+  for (const k of CAT_KEYS) for (const f of MATH_CATS[k].facts()) { const fs = factState(gs, k, f); if (fs.st === "slow" || fs.st === "miss") weak.push({ k, f, ...fs }); }
+  weak.sort((a, b) => b.score - a.score);
+  const top = weak.slice(0, 12);
+  const weakTable = top.length ? `<div class="ptable-wrap"><table class="ptable" style="min-width:460px"><thead><tr><th>Fact</th><th>Category</th><th>Avg time / standard</th><th>Recent accuracy</th><th>Tries</th></tr></thead><tbody>
+    ${top.map(x => `<tr><td><b>${esc(factLabel(x.f))}</b></td><td class="muted">${esc(MATH_CATS[x.k].name)}</td><td class="num">${(x.ms / 1000).toFixed(1)}s <span class="muted">/ ${(x.tms / 1000).toFixed(1)}s</span></td><td class="num ${x.st === "miss" ? "neg" : ""}">${pct(1 - x.miss)}</td><td class="num">${x.n}</td></tr>`).join("")}
+    </tbody></table></div>` : `<p class="muted">No slow or missed facts yet. Take a few timed checks and the ones that cost you time will show up here.</p>`;
+
+  $("#view").innerHTML = `
+  <div class="wrap" style="gap:22px">
+    <div class="gamebar"><div class="left"><button class="btn ghost" type="button" id="gymBack">← Dashboard</button><h2>Math Gym</h2></div>
+      <span class="chip"><b class="num">${ready}</b>&nbsp;/ ${CAT_KEYS.length} case-ready</span></div>
+
+    <section class="hero">
+      <div class="card shift">
+        <span class="eyebrow">Drill this next</span>
+        ${f0 ? `<h2>${esc(MATH_CATS[f0].name)}</h2><p>${esc(focusReason(gs, f0))}</p>
+        <button class="btn primary" type="button" data-cat="${f0}">Start 60-second check</button>` : `<h2>Every standard met</h2><p>Keep it sharp with mixed sprints and Problem Solving. Fluency fades without practice.</p>`}
+      </div>
+      <div class="card wrap" style="gap:10px">
+        <span class="eyebrow">Up next</span>
+        ${focus.slice(1, 4).map(k => `<div class="nextup"><span class="pill ${STATUS_PILL[gs.cats[k].status]}">${STATUS_LABEL[gs.cats[k].status]}</span><button class="linkbtn" type="button" data-cat="${k}">${esc(MATH_CATS[k].name)}</button></div>`).join("") || `<p class="muted">Nothing queued.</p>`}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
+          <button class="btn" type="button" data-mode="math">Mixed sprint · 90 s</button>
+          <button class="btn" type="button" data-mode="problem">Problem Solving</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card wrap" style="gap:12px">
+      <div class="section-head"><h2>Fluency ladder</h2><span class="muted small">Rate = median of your last three 60-second checks · bar tick = standard</span></div>
+      <div class="ptable-wrap"><table class="ptable ladder">
+        <thead><tr><th>Category</th><th>Status</th><th>Correct / min</th><th>Best</th><th>Accuracy</th><th>Median time</th><th>Last 8 checks</th><th></th></tr></thead>
+        <tbody>
+          <tr class="tier"><td colspan="8">Tier 1 · Fact fluency, the reflexes</td></tr>${tierRows(1)}
+          <tr class="tier"><td colspan="8">Tier 2 · Case operations, the moves</td></tr>${tierRows(2)}
+        </tbody></table></div>
+    </section>
+
+    <section class="card wrap" style="gap:14px">
+      <div class="section-head"><h2>Fact tables</h2>
+        <span class="legend"><span><i class="fchip fast"></i>At standard</span><span><i class="fchip slow"></i>Slow</span><span><i class="fchip miss"></i>Missed recently</span><span><i class="fchip none"></i>Not seen</span></span></div>
+      <div class="facts-layout">
+        <div class="wrap" style="gap:8px"><div class="row"><h3>Times tables · avg seconds</h3><button class="linkbtn" type="button" data-cat="mult">Drill</button></div>
+          <div class="heat" role="img" aria-label="Times table heat map; the weakest facts are also listed in the table below">${heat}</div>
+          <p class="muted small">Standard: ${(60 / MATH_CATS.mult.cpm).toFixed(1)}s per fact. Drills automatically serve your slow and missed cells more often.</p></div>
+        <div class="fpanels">${panels}</div>
+      </div>
+    </section>
+
+    <section class="card wrap" style="gap:12px">
+      <div class="section-head"><h2>Weakest facts</h2>${top.length ? `<button class="btn sm primary" type="button" id="weakBtn">Drill these ${top.length} · 60 s</button>` : ""}</div>
+      ${weakTable}
+    </section>
+
+    <section class="card wrap standards" style="gap:10px">
+      <h2>How the standards are set</h2>
+      <p><b>Tier 1, fact fluency.</b> Research on basic-fact fluency finds that learners who answer about 30–40 facts correctly per minute keep progressing on harder multi-step work, while those under about 30 tend to stall (Miller &amp; Heward, 1992, as summarized by Rocket Math). Precision-teaching aims for written facts run higher, 60–100 digits per minute. Typing is slower than writing, so the standard here is 30 per minute for single facts, scaled down for longer answers: 25 for fractions, 20 for squares, 15 for 2-digit × 1-digit. Accuracy must be at least 95%.</p>
+      <p><b>Tier 2, case operations.</b> No firm publishes a number. Prep sources agree on about 5 seconds for a simple percentage and under 10 seconds per calculation step, with no single step over 20 seconds (Hacking the Case Interview, Management Consulted). That works out to 12 per minute for one-step moves, 8–10 for division and % change, and 6 for two-step moves like breakeven or compounding. Accuracy must be at least 90%, within 1–3% of the exact figure.</p>
+      <p><b>Why tier 1 comes first.</b> Fluency research treats basic facts as components of composite skills: when the components become automatic, the composite skills improve faster and hold up better under pressure (Binder, 1996). In a case, that means working memory goes to the logic instead of to 7 × 8. The focus pick weights tier 1 higher for this reason.</p>
+      <p><b>How it's measured.</b> A category's rate comes only from its own 60-second checks: the median of your last three, so one bad run doesn't swing it. Every answer, including mixed sprints and Daily Shift items, feeds the per-fact tables and accuracy.</p>
+      <p class="muted small">Sources: <a href="https://www.rocketmath.com/2016/12/02/how-fast-should-students-be-with-math-facts/" target="_blank" rel="noopener">Rocket Math on fact-fluency rates</a> · <a href="https://psyc.athabascau.ca/open/lindsley/setaim.php" target="_blank" rel="noopener">Precision teaching: setting aims</a> · <a href="https://binde1.verio.com/Evolution_Binder1996.pdf" target="_blank" rel="noopener">Binder (1996), behavioral fluency</a> · <a href="https://www.hackingthecaseinterview.com/pages/how-to-get-faster-at-case-interview-math" target="_blank" rel="noopener">Hacking the Case Interview: faster case math</a> · <a href="https://www.hackingthecaseinterview.com/pages/case-interview-fractions" target="_blank" rel="noopener">HTCI: fractions</a> · <a href="https://managementconsulted.com/fast-math/" target="_blank" rel="noopener">Management Consulted: fast math</a></p>
+    </section>
+  </div>`;
+
+  const v = $("#view");
+  $("#gymBack").addEventListener("click", renderHome);
+  v.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => startSession("m:" + b.dataset.cat)));
+  v.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => startSession(b.dataset.mode)));
+  v.querySelectorAll("[data-strat]").forEach(b => b.addEventListener("click", () => {
+    const r = $("#strat-" + b.dataset.strat); r.hidden = !r.hidden; b.setAttribute("aria-expanded", String(!r.hidden)); b.textContent = r.hidden ? "How" : "Hide";
+  }));
+  if ($("#weakBtn")) $("#weakBtn").addEventListener("click", () => startSession("weak", { weak: top.map(x => x.k + "|" + x.f) }));
+  scrollTo(0, 0);
+}
+
+/* ============================================================
    Rendering: game
    ============================================================ */
 function renderGame() {
   screen = "game";
-  const m = MODES[S.mode];
   $("#view").innerHTML = `
   <div class="wrap" style="gap:14px">
     <div class="gamebar">
-      <div class="left"><button class="btn ghost" type="button" id="quitBtn" aria-label="Quit session">✕ Quit</button><h2>${m.name}</h2></div>
+      <div class="left"><button class="btn ghost" type="button" id="quitBtn" aria-label="Quit session">✕ Quit</button><h2>${esc(modeName(S.mode))}</h2></div>
       <div class="hud"><span class="combo" id="combo"></span><span class="timer" id="timer" ${S.sprint ? "" : "hidden"}></span><span class="chip"><b class="num" id="xpHud">0</b>&nbsp;XP</span></div>
     </div>
     <div class="pips" id="pips" ${S.sprint ? "hidden" : ""}></div>
@@ -1195,6 +1602,7 @@ function renderQuestion() {
     st.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => answerMCQ(+b.dataset.i)));
   } else if (q.type === "num") {
     st.innerHTML = `${contextBlock(q)}
+      ${q.label && S.mode !== "m:" + q.c ? `<span class="eyebrow" style="text-align:center">${esc(q.label)}</span>` : ""}
       <div class="${q.sprint ? "sprint-q" : "qtitle"}">${esc(q.title)}</div>
       <form class="numrow" id="numForm" autocomplete="off">
         <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m"}" aria-label="Your answer">
@@ -1270,14 +1678,14 @@ function answerNum(v) {
   const target = q.answer;
   const near = (a) => Math.abs(a - target) <= Math.max(Math.abs(target) * q.tol, q.abs || 0);
   let ok = near(x);
-  if (!ok && !/[kmbt%]/i.test(v) && Math.abs(target) >= 1e5) ok = [1e3, 1e6, 1e9].some(m => near(x * m));
+  if (!ok && !q.strict && !/[kmbt%]/i.test(v) && Math.abs(target) >= 1e5) ok = [1e3, 1e6, 1e9].some(m => near(x * m));
   const r = record(ok ? 1 : 0);
   const shown = q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
   if (q.sprint) {
     const f = $("#flash"); f.className = "flash " + (ok ? "ok" : "no");
-    f.textContent = ok ? `✓ ${shown}` : `✗ ${shown}`;
+    f.textContent = ok ? `✓ ${shown}` : `✗ ${shown}${q.tip ? "  ·  " + q.tip : ""}`;
     $("#numIn").disabled = true;
-    const me = S; setTimeout(() => { if (S === me) next(); }, ok ? 420 : 1600); return;
+    const me = S; setTimeout(() => { if (S === me) next(); }, ok ? 420 : q.tip ? 2600 : 1600); return;
   }
   $("#numIn").disabled = true;
   showFeedback(ok ? 1 : 0, `<div>Answer: <b class="num">${shown}</b>. You said <span class="num">${esc(v)}</span>.</div>
@@ -1333,6 +1741,8 @@ async function finish() {
   if (!s.items.length) return renderHome();
   const before = totals().xp;
   const rec = { id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ts: Date.now(), mode: s.mode, items: s.items, xp: s.xp, bestCombo: s.bestCombo };
+  if (s.sprint) rec.dur = Math.round(Math.min(s.sprint, (Date.now() - s.startTs) / 1000));
+  const isMath = s.mode === "math" || s.mode === "weak" || s.mode.startsWith("m:");
   const prev = Store.recs.filter(r => r.mode === s.mode).slice(-1)[0];
   Store.add(rec);
   const acc = s.items.reduce((a, b) => a + b.ok, 0) / s.items.length;
@@ -1347,11 +1757,24 @@ async function finish() {
     const a = bySkill[k], ac = a.reduce((x, y) => x + y.ok, 0) / a.length, ms = a.reduce((x, y) => x + y.ms, 0) / a.length;
     return `<div><span class="pill ${ac >= .85 ? "mast" : ac >= .6 ? "prog" : "work"}">${pct(ac)}</span><span><b>${SKILLS[k].name}</b> · ${a.length} item${a.length > 1 ? "s" : ""} · avg ${(ms / 1000).toFixed(1)}s vs ${(SKILLS[k].target / 1000).toFixed(0)}s target</span></div>`;
   }).join("");
-  const sprintLine = s.sprint ? `<p><b class="num">${correctN}</b> correct in ${s.sprint} seconds${prev ? ` · last time <b class="num">${prev.items.filter(i => i.ok >= .75).length}</b>` : ""}.</p>` : "";
+  const sprintLine = s.sprint ? `<p><b class="num">${correctN}</b> correct in ${rec.dur} seconds${prev ? ` · last time <b class="num">${prev.items.filter(i => i.ok >= .75).length}</b>` : ""}.</p>` : "";
+  let mathBlock = "";
+  if (isMath) {
+    const cpm = correctN / (rec.dur / 60);
+    if (s.mode.startsWith("m:")) {
+      const C = MATH_CATS[s.mode.slice(2)], met = cpm >= C.cpm && acc >= C.acc;
+      mathBlock += `<div class="std ${met ? "met" : ""}"><b class="num">${cpm.toFixed(1)}</b> correct per minute · standard <b class="num">${C.cpm}</b> at ${pct(C.acc)} accuracy · ${met ? "standard met" : `${Math.max(0, C.cpm - cpm).toFixed(1)} short`}${rec.dur < 45 ? " · ended early, so this doesn't count as a timed check" : ""}</div>`;
+    }
+    const byCat = {};
+    s.items.filter(i => i.c).forEach(i => (byCat[i.c] = byCat[i.c] || []).push(i));
+    if (Object.keys(byCat).length > 1) mathBlock += `<div class="review">${Object.keys(byCat).map(k => { const a = byCat[k], ac = a.filter(i => i.ok >= 1).length / a.length, ms = a.reduce((x, y) => x + y.ms, 0) / a.length; return `<div><span class="pill ${ac >= MATH_CATS[k].acc ? "mast" : ac >= .7 ? "prog" : "work"}">${pct(ac)}</span><span><b>${MATH_CATS[k].name}</b> · ${a.length} · avg ${(ms / 1000).toFixed(1)}s vs ${(60 / MATH_CATS[k].cpm).toFixed(1)}s standard</span></div>`; }).join("")}</div>`;
+    const slow = s.items.filter(i => i.c).map((i, n) => ({ i, q: s.results[n] && s.results[n].q })).filter(x => x.q).sort((a, b) => (b.i.ok < 1) - (a.i.ok < 1) || b.i.ms - a.i.ms).slice(0, 5);
+    if (slow.length) mathBlock += `<div><span class="eyebrow">Slowest or missed this run</span><div class="review">${slow.map(x => `<div><span class="num" style="min-width:4.5em">${(x.i.ms / 1000).toFixed(1)}s</span><span>${x.i.ok >= 1 ? "✓" : "<span style='color:var(--bad)'>✗</span>"} ${esc(x.q.title)} <span class="muted">· ${esc(x.q.tip || "")}</span></span></div>`).join("")}</div></div>`;
+  }
   $("#view").innerHTML = `
   <div class="wrap">
     <section class="card results">
-      <span class="eyebrow">${MODES[s.mode].name} · debrief</span>
+      <span class="eyebrow">${esc(modeName(s.mode))} · debrief</span>
       <h2 style="font-size:1.8rem">${acc >= .9 ? "Partner-ready." : acc >= .7 ? "Strong work." : acc >= .45 ? "Getting there." : "Tough room."}</h2>
       <p class="muted" style="font-style:italic">${quipFor(acc)}</p>
       ${r1.i > r0.i ? `<div class="rankup">Promoted to ${r1.name}.</div>` : ""}
@@ -1362,14 +1785,16 @@ async function finish() {
         <div><b>+${s.xp}</b><span>XP earned</span></div>
         <div><b>×${s.bestCombo}</b><span>best combo</span></div>
       </div>
-      <div class="review">${review}</div>
+      ${isMath ? mathBlock : `<div class="review">${review}</div>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn primary" type="button" id="againBtn">Run it back <kbd style="background:transparent;color:inherit;border-color:currentColor">Enter</kbd></button>
+        ${isMath ? `<button class="btn" type="button" id="gymBtn2">Back to Math Gym</button>` : ""}
         <button class="btn" type="button" id="homeBtn2">Back to dashboard</button>
       </div>
     </section>
   </div>`;
-  $("#againBtn").addEventListener("click", () => startSession(s.mode));
+  $("#againBtn").addEventListener("click", () => startSession(s.mode, { weak: s.weak }));
+  if (isMath) $("#gymBtn2").addEventListener("click", renderGym);
   $("#homeBtn2").addEventListener("click", renderHome);
   $("#againBtn").focus({ preventScroll: true });
   if (acc >= .8 || r1.i > r0.i) confetti();
@@ -1398,7 +1823,7 @@ document.addEventListener("keydown", e => {
   const tag = (e.target.tagName || "").toLowerCase();
   if (!S) {
     if (tag === "textarea" || tag === "input") return;
-    if (e.key === "d" || e.key === "D") { if ($("[data-mode='daily']")) startSession("daily"); }
+    if ((e.key === "d" || e.key === "D") && screen === "home") startSession("daily");
     if (e.key === "Enter" && $("#againBtn") && document.activeElement !== $("#homeBtn2")) { e.preventDefault(); $("#againBtn").click(); }
     return;
   }
