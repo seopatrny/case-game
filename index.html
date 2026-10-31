@@ -316,6 +316,15 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .quitbar .qb { display: flex; gap: 8px; }
 .backup[hidden] { display: none; }
 
+/* strategy */
+.worked { border-left: 3px solid var(--hl); padding: 4px 0 4px 12px; }
+.worked ol { margin: 6px 0 0; padding-left: 1.3em; display: grid; gap: 3px; font-size: .95rem; }
+.worked .wq { font-family: var(--mono); font-weight: 600; margin-top: 6px; }
+.stratlist { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; font-size: .92rem; max-width: 75ch; }
+.stratbox { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; background: var(--surface-2); }
+.stratbox summary { cursor: pointer; font-weight: 700; }
+.stratbox[open] summary { margin-bottom: 10px; }
+
 @media (max-width: 680px) {
   .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
@@ -940,33 +949,36 @@ const MATH_CATS = {
   mult: {
     name: "Times tables 2–12", tier: 1, cpm: 30, acc: .95,
     blurb: "Every product up to 12 × 12, recalled rather than computed.",
+    intro: { example: ["7 × 8 = ?", "Goal: you just know it's 56. That's recall, and it's what the 2-second standard measures.", "While learning, anchor on 10: 7 × 10 = 70, then take away 7 × 2 = 14.", "70 − 14 = 56. ✓", "Each time you use the anchor, say the fact itself (7 × 8 = 56) so it sticks."] },
     strat: ["Recall, don't compute: the goal is under 2 seconds per fact. If you are counting up, that fact needs reps.", "Hard facts lean on anchors: ×9 = ×10 minus one group (7×9 = 70 − 7); ×12 = ×10 plus ×2.", "Drill the slow cells in the heat map below. Most people's gaps cluster in 6–8 × 6–9."],
     facts() { const o = []; for (let a = 2; a <= 12; a++) for (let b = a; b <= 12; b++) o.push(a + "×" + b); return o; },
     make(f) {
       const [a, b] = f.split("×").map(Number); const [x, y] = Math.random() < .5 ? [a, b] : [b, a];
-      const tip = b === 11 || b === 12 ? `${a}×${b} = ${a}×10 + ${a}×${b - 10}` : b >= 6 && b <= 9 ? `${a}×${b} = ${a}×10 − ${a}×${10 - b}` : `${a}×${b} = ${a * b}`;
+      const tip = b === 11 || b === 12 ? `Anchor on 10: ${a}×${b} = ${a * 10} + ${a * (b - 10)} = ${a * b}` : b >= 7 && b <= 9 && a > 2 ? `Anchor on 10: ${a}×${b} = ${a * 10} − ${a * (10 - b)} = ${a * b}` : `Recall: ${a}×${b} = ${a * b}`;
       return { q: `${x} × ${y}`, a: a * b, tol: 0, tip };
     }
   },
   sq: {
     name: "Squares 11–25", tier: 1, cpm: 20, acc: .95,
     blurb: "Squares show up in growth, area-style sizing and the near-square trick.",
-    strat: ["Memorize 11²–25². They unlock fast products like 23 × 27 = 25² − 2² = 621.", "Near a round number: n² = (n − k)(n + k) + k². 23² = 20 × 26 + 9 = 529.", "Ending in 5: take the tens digit t, compute t × (t + 1), then append 25. 35² → 3 × 4 = 12 → 1225."],
+    strat: ["The goal is recall: at 20 per minute you have 3 seconds, which is not enough time to calculate. Use the tricks below while learning, and drill until the answer just appears.", "Near-square trick: n² = (n − k)(n + k) + k². Move n to the nearest multiple of 10, move the other factor the same distance the opposite way, multiply, then add the distance squared. 23² → 20 × 26 + 3² = 520 + 9 = 529.", "Why it works: (n − k)(n + k) = n² − k² (difference of squares), so adding k² back gives n². Picking k to make one factor round turns a hard square into an easy product.", "Ending in 5: take the tens digit t, compute t × (t + 1), then append 25. 25² → 2 × 3 = 6 → 625.", "Payoff in cases: squares unlock fast near-products, like 23 × 27 = 25² − 2² = 621."],
+    intro: { example: ["24² = ?", "Round 24 down 4 to 20, so move the other 24 up 4 to 28.", "20 × 28 = 560 (easy: 2 × 28 = 56, add a zero).", "Add back the distance squared: 4² = 16.", "560 + 16 = 576. ✓"] },
     facts() { const o = []; for (let n = 11; n <= 25; n++) o.push(n + "²"); return o; },
     make(f) {
       const n = parseInt(f), k = n - Math.round(n / 10) * 10, t = Math.floor(n / 10);
-      const tip = n % 10 === 5 ? `${t}×${t + 1} = ${t * (t + 1)}, append 25 → ${n * n}` : `${n}² = ${n - k}×${n + k} + ${k * k} = ${n * n}`;
+      const tip = n % 10 === 0 ? `Recall: ${n}² = ${n * n}` : n % 10 === 5 ? `Ends in 5: ${t}×${t + 1} = ${t * (t + 1)}, append 25 → ${n * n}` : `Near-square: ${n}² = ${n - k}×${n + k} + ${Math.abs(k)}² = ${(n - k) * (n + k)} + ${k * k} = ${n * n}`;
       return { q: `${n}²`, a: n * n, tol: 0, tip };
     }
   },
   frac: {
     name: "Fractions ↔ percents", tier: 1, cpm: 25, acc: .95,
     blurb: "The conversion table that turns hard division into a lookup.",
+    intro: { example: ["3/8 as a % = ?", "Start from the unit fraction you've memorized: 1/8 = 12.5%.", "Multiply by the numerator: 3 × 12.5% = 37.5%. ✓", "In a case, run it backwards: a 37.5% margin is 3/8 of revenue."] },
     strat: ["Memorize the unit fractions: 1/6 = 16.7%, 1/7 = 14.3%, 1/8 = 12.5%, 1/9 = 11.1%, 1/11 = 9.1%, 1/12 = 8.3%.", "Build the rest by multiplying: 3/8 = 3 × 12.5% = 37.5%; 5/6 = 100% − 16.7%.", "Run it backwards in a case: 'margin is 14%' → about 1/7 of revenue. Dividing by 7 is easier than multiplying by 0.14."],
     facts() { return FRACS; },
     make(f) {
       const [n, d] = f.split("/").map(Number); const p = n / d * 100;
-      const tip = `1/${d} = ${(100 / d).toFixed(1)}%${n > 1 ? ` → ×${n} = ${p.toFixed(1)}%` : ""}`;
+      const tip = n > 1 ? `Unit fraction: 1/${d} = ${(100 / d).toFixed(1)}% → ×${n} = ${p.toFixed(1)}%` : `Recall: 1/${d} = ${p.toFixed(1)}%`;
       if (Math.random() < .7) return { q: `${n}/${d} as a %`, a: p, unit: "%", tol: 0, abs: .2, tip };
       return { q: `${+p.toFixed(1)}% = ? / ${d}`, a: n, tol: 0, tip };
     }
@@ -974,12 +986,13 @@ const MATH_CATS = {
   mult2: {
     name: "2-digit × 1-digit", tier: 1, cpm: 15, acc: .95,
     blurb: "The workhorse step inside nearly every case multiplication.",
+    intro: { example: ["47 × 6 = ?", "Break the 2-digit number into tens and ones: 40 and 7.", "Multiply each, left to right: 40 × 6 = 240, 7 × 6 = 42.", "Add: 240 + 42 = 282. ✓", "Working left to right means you say the big part first, which is how you'd talk it through in an interview."] },
     strat: ["Break apart left to right: 47 × 6 = 40 × 6 + 7 × 6 = 240 + 42 = 282.", "Round and fix: 58 × 7 = 60 × 7 − 2 × 7 = 406.", "Special multipliers: ×5 = ×10 ÷ 2, ×25 = ×100 ÷ 4, ×15 = ×10 plus half, ×11: add the two digits and put the sum in the middle."],
     facts() { return ["×3", "×4", "×6", "×7", "×8", "×9", "×11", "×12", "×15", "×25"]; },
     make(f) {
       const d = parseInt(f.slice(1)); let n = ri(13, 98); if (n % 10 === 0) n++;
       const t = Math.floor(n / 10) * 10, o = n % 10;
-      const tip = d === 25 ? `${n}×25 = ${n}×100 ÷ 4` : d === 15 ? `${n}×15 = ${n * 10} + ${n * 5}` : d === 11 ? `${n}×11 = ${n}×10 + ${n}` : `${n}×${d} = ${t}×${d} + ${o}×${d} = ${t * d} + ${o * d}`;
+      const tip = d === 25 ? `Quarter trick: ${n}×25 = ${n * 100} ÷ 4 = ${n * 25}` : d === 15 ? `Ten plus half: ${n}×15 = ${n * 10} + ${n * 5} = ${n * 15}` : d === 11 ? `Ten plus one: ${n}×11 = ${n * 10} + ${n} = ${n * 11}` : `Break apart: ${n}×${d} = ${t}×${d} + ${o}×${d} = ${t * d} + ${o * d} = ${n * d}`;
       return { q: `${n} × ${d}`, a: n * d, tol: 0, tip };
     }
   },
@@ -1401,8 +1414,34 @@ function buildQueue(mode) {
   return [];
 }
 
+function introSeen(cat) { try { return localStorage.getItem("caseCracker.intro." + cat) === "1"; } catch (e) { return false; } }
+function markIntro(cat) { try { localStorage.setItem("caseCracker.intro." + cat, "1"); } catch (e) {} }
+function strategyHTML(C) {
+  return `${C.intro ? `<div class="worked"><span class="eyebrow">Worked example</span><div class="wq">${esc(C.intro.example[0])}</div><ol>${C.intro.example.slice(1).map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
+    <ul class="stratlist">${C.strat.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+}
+function renderIntro(cat) {
+  S = null; clearInterval(timerId); screen = "intro";
+  const C = MATH_CATS[cat];
+  markIntro(cat);
+  $("#view").innerHTML = `
+  <div class="wrap" style="gap:14px">
+    <div class="gamebar"><div class="left"><button class="btn ghost" type="button" id="introBack">← Math Gym</button><h2>${esc(C.name)}</h2></div></div>
+    <section class="card stage">
+      <span class="eyebrow">Before your first check · 1 minute read</span>
+      <h2>${esc(C.blurb)}</h2>
+      <p class="muted">Standard: <b class="num">${C.cpm}</b> correct per minute (${(60 / C.cpm).toFixed(1)} s each) at ${pct(C.acc)} accuracy. When you miss, the tip names the trick it used.</p>
+      ${strategyHTML(C)}
+      <div class="nextrow"><button class="btn primary" type="button" id="introGo">Start 60-second check</button></div>
+    </section>
+  </div>`;
+  $("#introBack").addEventListener("click", renderGym);
+  $("#introGo").addEventListener("click", () => startSession("m:" + cat, { skipIntro: true }));
+  $("#introGo").focus();
+}
 function startSession(mode, opts = {}) {
   stopConfetti();
+  if (mode.startsWith("m:") && !opts.skipIntro && !introSeen(mode.slice(2))) return renderIntro(mode.slice(2));
   const sprint = mode === "math" || mode === "boss" ? 90 : mode === "lingo" || mode === "weak" || mode.startsWith("m:") ? 60 : 0;
   S = { mode, queue: sprint ? [] : buildQueue(mode), idx: 0, items: [], combo: 0, bestCombo: 0, xp: 0, sprint, endAt: 0, qStart: 0, answered: false, results: [], weak: opts.weak || null, gs: gymStats(), startTs: Date.now(), reask: [],
     bosses: mode === "boss" ? opts.bosses.map(k => ({ k, hp: 3 })) : null };
@@ -1661,7 +1700,7 @@ function renderGym() {
       <td>${sparkSVG(checks.map(c => clamp(c.cpm / max, 0, 1)), "var(--accent)", checks.map(c => c.cpm.toFixed(1) + " correct/min"))}</td>
       <td class="acts"><button class="btn sm primary" type="button" data-cat="${k}">Drill</button><button class="linkbtn" type="button" data-strat="${k}" aria-expanded="false">How</button></td>
     </tr>
-    <tr class="strat-row" id="strat-${k}" hidden><td colspan="8"><span class="eyebrow">Strategy</span><ul>${C.strat.map(x => `<li>${esc(x)}</li>`).join("")}</ul></td></tr>`;
+    <tr class="strat-row" id="strat-${k}" hidden><td colspan="8">${strategyHTML(C)}</td></tr>`;
   };
   const tierRows = t => CAT_KEYS.filter(k => MATH_CATS[k].tier === t).map(row).join("");
 
@@ -2049,8 +2088,14 @@ async function finish() {
     const byCat = {};
     s.items.filter(i => i.c).forEach(i => (byCat[i.c] = byCat[i.c] || []).push(i));
     if (Object.keys(byCat).length > 1) mathBlock += `<div class="review">${Object.keys(byCat).map(k => { const a = byCat[k], ac = a.filter(i => i.ok >= 1).length / a.length, ms = a.reduce((x, y) => x + y.ms, 0) / a.length; return `<div><span class="pill ${ac >= MATH_CATS[k].acc ? "mast" : ac >= .7 ? "prog" : "work"}">${pct(ac)}</span><span><b>${MATH_CATS[k].name}</b> · ${a.length} · avg ${(ms / 1000).toFixed(1)}s vs ${(60 / MATH_CATS[k].cpm).toFixed(1)}s standard</span></div>`; }).join("")}</div>`;
-    const slow = s.items.filter(i => i.c).map((i, n) => ({ i, q: s.results[n] && s.results[n].q })).filter(x => x.q).sort((a, b) => (b.i.ok < 1) - (a.i.ok < 1) || b.i.ms - a.i.ms).slice(0, 5);
-    if (slow.length) mathBlock += `<div><span class="eyebrow">Slowest or missed this run</span><div class="review">${slow.map(x => `<div><span class="num" style="min-width:4.5em">${(x.i.ms / 1000).toFixed(1)}s</span><span>${x.i.ok >= 1 ? "✓" : "<span style='color:var(--bad)'>✗</span>"} ${esc(x.q.title)} <span class="muted">· ${esc(x.q.tip || "")}</span></span></div>`).join("")}</div></div>`;
+    const slow = s.items.map((i, n) => ({ i, q: s.results[n] && s.results[n].q })).filter(x => x.i.c && x.q).sort((a, b) => (b.i.ok < 1) - (a.i.ok < 1) || b.i.ms - a.i.ms).slice(0, 5);
+    if (slow.length) mathBlock += `<div><span class="eyebrow">Slowest or missed this run</span><div class="review">${slow.map(x => {
+      const ans = x.q.unit === "%" ? (+x.q.answer.toFixed(1)) + "%" : fmtNum(x.q.answer);
+      return `<div><span class="num" style="min-width:4.5em">${(x.i.ms / 1000).toFixed(1)}s</span><span>${x.i.ok >= 1 ? `✓ ${esc(x.q.title)} = ${esc(ans)}` : `<span style='color:var(--bad)'>✗</span> ${esc(x.q.title)} <span class="muted">· ${esc(x.q.tip || ans)}</span>`}</span></div>`;
+    }).join("")}</div></div>`;
+    // Strategy for the drill (single-category check) or for each category missed in a mixed run
+    const stratCats = s.mode.startsWith("m:") ? [s.mode.slice(2)] : [...new Set(s.items.filter(i => i.c && i.ok < 1).map(i => i.c))].slice(0, 2);
+    mathBlock += stratCats.map(k => `<details class="stratbox" ${s.mode.startsWith("m:") ? "open" : ""}><summary>How to get faster at ${esc(MATH_CATS[k].name)}</summary>${strategyHTML(MATH_CATS[k])}</details>`).join("");
   }
   $("#view").innerHTML = `
   <div class="wrap">
