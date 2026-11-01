@@ -325,6 +325,26 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .stratbox summary { cursor: pointer; font-weight: 700; }
 .stratbox[open] summary { margin-bottom: 10px; }
 
+/* formulas + glossary */
+.formulas { display: grid; gap: 6px; padding: 10px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.fline { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: .9rem; }
+.fline code, .gentry code, .flash-fx code { font-family: var(--mono); font-size: .85rem; background: var(--accent-soft); color: var(--ink); padding: 2px 6px; border-radius: 4px; }
+.formulas .linkbtn { justify-self: start; }
+.fterm { font-weight: 700; color: var(--ink); text-decoration-color: var(--line); }
+.flash-fx { font-family: var(--body); font-size: .9rem; font-weight: 500; color: var(--ink); margin-top: 6px; }
+.chipbtn { cursor: pointer; }
+.chipbtn:hover { border-color: var(--accent); }
+.gloss-back { position: fixed; inset: 0; z-index: 40; background: color-mix(in srgb, var(--ink) 45%, transparent); display: flex; justify-content: center; align-items: flex-start; padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+.gloss { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; width: 100%; max-width: 760px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.gloss-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+#glossSearch { font: inherit; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--ink); }
+.gloss-list { display: flex; flex-direction: column; gap: 16px; }
+.gloss-list h3 { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.gentry { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid var(--line); }
+.gentry code { align-self: flex-start; }
+.gentry p { font-size: .9rem; color: var(--muted); max-width: 70ch; }
+.gentry .gex { font-family: var(--mono); font-size: .8rem; }
+
 @media (max-width: 680px) {
   .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
@@ -341,6 +361,7 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
   <header class="top">
     <button class="brand" id="homeBtn" type="button" aria-label="Back to home"><b>Case <mark>Cracker</mark></b></button>
     <div class="chips">
+      <button class="chip chipbtn" type="button" data-glossary="1">Glossary</button>
       <span class="chip" id="streakChip">🔥 0-day streak</span>
       <span class="chip" id="syncChip"><span class="dot"></span><span>Saved on this device</span></span>
     </div>
@@ -363,6 +384,8 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 const roundTo = (x, step) => Math.round(x / step) * step;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
+// "an 8%", "a 6%": the article follows how the number is spoken
+const aPct = n => (/^(8|11|18|8\d)(\.|$)/.test(String(n)) ? "an " : "a ") + n + "%";
 // Exact when the value ends within two decimals (6.25, 18.75), otherwise one decimal (33.3)
 const exactNum = v => { const r2 = Math.round(v * 100) / 100; return String(Math.abs(v - r2) < 1e-9 ? r2 : +v.toFixed(1)); };
 const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); };
@@ -611,7 +634,7 @@ function metricRoundPQVF() {
     skill: "metric", type: "mcq", exhibit,
     title: `Quantify it. What is the profit impact of the ${DRIVERS[main].label.toLowerCase()} change?`,
     options: ms.map(o => mUSD(o.v)), answer: ms.findIndex(o => o.ok),
-    explain: `${howCalc} ${traps[main].why} That driver explains ${pct(share)} of the ${mUSD(dP)} change.${overNote}${bridgeHTML(g.eff, labels, dP)}`
+    explain: `${howCalc} ${traps[main].why} That driver explains ${pct(share)} of the ${mUSD(dP)} change.${overNote}${bridgeHTML(g.eff, labels, dP)}${formulaHTML(["driverEffects"])}`
   };
 
   const wrong = pick(Object.keys(DRIVERS).filter(k => k !== main));
@@ -673,7 +696,7 @@ function metricRoundMix() {
       skill: "metric", type: "mcq", exhibit,
       title: `What share of the total ${mUSD(dT, 0)} decline does ${s.segs[hit]} explain?`,
       options: cs.map(c => c.v + "%"), answer: cs.findIndex(c => c.ok),
-      explain: `${s.segs[hit]} went from $${base[hit]}M to $${nxt[hit]}M (${mUSD(d[hit], 0)}). ${mUSD(d[hit], 0)} ÷ ${mUSD(dT, 0)} ≈ ${corr}%.${corr > 100 ? " It exceeds 100% because the other rows grew a little." : ""} A common slip is dividing by total ${lineLc} (${wrongDen}%), which answers a different question.`
+      explain: `${s.segs[hit]} went from $${base[hit]}M to $${nxt[hit]}M (${mUSD(d[hit], 0)}). ${mUSD(d[hit], 0)} ÷ ${mUSD(dT, 0)} ≈ ${corr}%.${corr > 100 ? " It exceeds 100% because the other rows grew a little." : ""} A common slip is dividing by total ${lineLc} (${wrongDen}%), which answers a different question.${formulaHTML(["shareOfDecline"])}`
     };
     const other = order.filter(i => i !== hit).sort((a, b) => base[b] - base[a])[0];
     const head = `"${s.line} is down ${mUSD(-dT, 0)}, about ${dropPct}, and`;
@@ -893,7 +916,7 @@ const TERMS = [
   ["ARPU", "Revenue ÷ average number of users or subscribers"],
   ["EBITDA", "Earnings before interest, taxes, depreciation & amortization"],
   ["Gross margin", "(Revenue − COGS) ÷ revenue"],
-  ["Contribution margin", "Price minus variable cost per unit, before fixed costs"],
+  ["Contribution margin", "(Price − variable cost) per unit, in $ or as a % of price, before fixed costs"],
   ["SG&A", "Selling, general & administrative expenses"],
   ["Operating leverage", "Profit grows faster than revenue because fixed costs stay flat"],
   ["Breakeven", "Fixed costs ÷ contribution margin per unit"],
@@ -1040,6 +1063,7 @@ const MATH_CATS = {
   },
   pchg: {
     name: "% change & growth", tier: 2, cpm: 8, acc: .9,
+    fx: { up: ["pctChange"], down: ["pctChange"], base: ["backOutBase"], stack: ["stacked"], ppts: ["ppts"] },
     blurb: "Growth rates, declines, backing out a base, and points versus percent.",
     strat: ["% change = (new − old) ÷ old. Always divide by the old number.", "Back out a base by dividing: after +25%, $150M ÷ 1.25 = $120M (not $150M × 0.75).", "Stacked changes multiply: +20% then −20% = 1.2 × 0.8 = 0.96, so −4%. Percentage points are not percent: 8% → 10% is +2 pts, or +25%."],
     facts() { return ["up", "down", "base", "stack", "ppts"]; },
@@ -1062,6 +1086,7 @@ const MATH_CATS = {
   },
   be: {
     name: "Margins & breakeven", tier: 2, cpm: 6, acc: .9,
+    fx: { margin: ["opMargin"], breakeven: ["breakeven"], contrib: ["contribMargin"], payback: ["payback"], markup: ["priceForMargin", "markup"] },
     blurb: "The profitability toolkit: margin, contribution, breakeven, payback, pricing to a margin.",
     strat: ["Breakeven units = fixed costs ÷ (price − variable cost per unit).", "Payback = investment ÷ annual cash flow. Margin = profit ÷ revenue.", "Price for a target margin = cost ÷ (1 − margin). A 25% margin on a $60 cost is $80, not $75."],
     facts() { return ["margin", "breakeven", "contrib", "payback", "markup"]; },
@@ -1075,6 +1100,7 @@ const MATH_CATS = {
   },
   cagr: {
     name: "Compounding & CAGR", tier: 2, cpm: 6, acc: .9,
+    fx: { "72": ["rule72"], "2yr": ["compound"], "3yr": ["compound"], cagr: ["cagr"] },
     blurb: "Projecting forward and backing out growth rates without a calculator.",
     strat: ["Rule of 72: doubling time ≈ 72 ÷ growth rate. 9% → 8 years.", "Two years at g: multiply by (1 + g)² = 1 + 2g + g². 10% → 1.21.", "Approximate CAGR: total growth ÷ years, then trim a little. 100 → 150 in 4 years is ~12.5% simple, actual ~10.7%."],
     facts() { return ["72", "2yr", "3yr", "cagr"]; },
@@ -1094,7 +1120,7 @@ function catItem(c, f) {
   // (percent answers are counted at one decimal place: 1/8 → "12.5", 1/3 → "33.3").
   const pattern = C.tier === 1 ? exactNum(g.a) : "";
   const auto = (pattern.match(/\d/g) || []).length;
-  return { skill: "math", type: "num", sprint: true, c, f, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol, abs: g.abs || 0, strict: !!g.strict, tip: g.tip, label: C.name, auto, pattern, tms: 60000 / C.cpm };
+  return { skill: "math", type: "num", sprint: true, c, f, title: g.q, answer: g.a, unit: g.unit || "", tol: g.tol, abs: g.abs || 0, strict: !!g.strict, tip: g.tip, label: C.name, auto, pattern, tms: 60000 / C.cpm, fx: (C.fx && C.fx[f]) || [] };
 }
 
 // Per-fact and per-category statistics from every math item ever answered.
@@ -1176,45 +1202,45 @@ function slowFacts(gs, c, n) {
 const PROBLEMS = [
   () => { const share = pick([35, 40, 50]), cups = pick([1.5, 2]), cafe = pick([15, 20, 25]), price = pick([4, 5]);
     const a = 330e6 * share / 100 * cups * 365 * cafe / 100 * price;
-    return { ctx: "Market sizing · US café coffee", title: `330M people in the US. ${share}% drink coffee, averaging ${cups} cups a day. ${cafe}% of cups are bought at cafés, at $${price} each. What is annual US café coffee revenue?`, a, unit: "$", tol: .04,
+    return { ctx: "Market sizing · US café coffee", fx: ["marketSize"], title: `330M people in the US. ${share}% drink coffee, averaging ${cups} cups a day. ${cafe}% of cups are bought at cafés, at $${price} each. What is annual US café coffee revenue?`, a, unit: "$", tol: .04,
       steps: [`Coffee drinkers: 330M × ${share}% = ${fmtNum(330e6 * share / 100)}`, `Cups per year: × ${cups} × 365 = ${fmtNum(330e6 * share / 100 * cups * 365)}`, `Café cups: × ${cafe}% = ${fmtNum(330e6 * share / 100 * cups * 365 * cafe / 100)}`, `Revenue: × $${price} ≈ ${money(a)}`] }; },
   () => { const cost = pick([4, 6, 8, 9, 12]), save = pick([0.5, 0.8, 1.2, 1.5]), units = pick([2, 2.5, 4, 5]);
     const ann = save * units; const a = cost / ann;
-    return { ctx: "Investment · automation payback", title: `A packaging line upgrade costs $${cost}M and saves $${save.toFixed(2)} per unit. The plant ships ${units}M units a year. What is the payback period in years?`, a, unit: "yrs", tol: .03,
+    return { ctx: "Investment · automation payback", fx: ["payback"], title: `A packaging line upgrade costs $${cost}M and saves $${save.toFixed(2)} per unit. The plant ships ${units}M units a year. What is the payback period in years?`, a, unit: "yrs", tol: .03,
       steps: [`Annual savings: $${save.toFixed(2)} × ${units}M = $${fmtNum(ann)}M`, `Payback: $${cost}M ÷ $${fmtNum(ann)}M ≈ ${a.toFixed(1)} years`] }; },
   () => { const arpu = pick([25, 30, 40, 50]), gm = pick([60, 70, 75, 80]), churn = pick([2, 2.5, 4, 5]);
     const a = arpu * gm / 100 / (churn / 100);
-    return { ctx: "Subscription · customer LTV", title: `A subscription app earns $${arpu}/month per user at a ${gm}% gross margin. Monthly churn is ${churn}%. What is customer lifetime value (gross-margin basis)?`, a, unit: "$", tol: .03,
+    return { ctx: "Subscription · customer LTV", fx: ["ltv"], title: `A subscription app earns $${arpu}/month per user at ${aPct(gm)} gross margin. Monthly churn is ${churn}%. What is customer lifetime value (gross-margin basis)?`, a, unit: "$", tol: .03,
       steps: [`Monthly margin per user: $${arpu} × ${gm}% = $${fmtNum(arpu * gm / 100)}`, `Expected lifetime: 1 ÷ ${churn}% = ${fmtNum(100 / churn)} months`, `LTV ≈ $${fmtNum(arpu * gm / 100)} × ${fmtNum(100 / churn)} = ${money(a)}`] }; },
   () => { const loans = pick([12, 18, 20, 25]), ly = pick([5.5, 6, 6.5, 7]), dep = loans - pick([1, 2, 3]), dr = pick([1.5, 2, 2.5, 3]);
     const a = (loans * ly / 100 - dep * dr / 100) * 1e9;
-    return { ctx: "Banking · net interest income", title: `A regional bank holds $${loans}B of loans yielding ${ly}% and $${dep}B of deposits costing ${dr}%. Ignoring other items, what is annual net interest income?`, a, unit: "$", tol: .02,
+    return { ctx: "Banking · net interest income", fx: ["nii"], title: `A regional bank holds $${loans}B of loans yielding ${ly}% and $${dep}B of deposits costing ${dr}%. Ignoring other items, what is annual net interest income?`, a, unit: "$", tol: .02,
       steps: [`Interest earned: $${loans}B × ${ly}% = $${fmtNum(loans * ly / 100 * 1e9)}`, `Interest paid: $${dep}B × ${dr}% = $${fmtNum(dep * dr / 100 * 1e9)}`, `NII ≈ ${money(a)}`] }; },
   () => { const rev = pick([400, 500, 800, 1000]), m1 = pick([6, 8, 10]), m2 = m1 + pick([3, 4, 5]);
     // costs fixed in dollars; new revenue R2 satisfies (R2 − C)/R2 = m2
     const C = rev * (1 - m1 / 100); const R2 = C / (1 - m2 / 100); const a = (R2 / rev - 1) * 100;
-    return { ctx: "Profitability · pricing target", title: `Revenue is $${rev}M at an ${m1}% operating margin. If costs and volume stay flat, by what % must prices rise to reach a ${m2}% margin?`, a, unit: "%", tol: .03, abs: .15,
+    return { ctx: "Profitability · pricing target", fx: ["opMargin", "revForMargin", "pctChange"], title: `Revenue is $${rev}M at ${aPct(m1)} operating margin. If costs and volume stay flat, by what % must prices rise to reach ${aPct(m2)} margin?`, a, unit: "%", tol: .03, abs: .15,
       steps: [`Costs: $${rev}M × (1 − ${m1}%) = $${fmtNum(C)}M`, `Revenue needed: $${fmtNum(C)}M ÷ (1 − ${m2}%) = $${fmtNum(R2)}M`, `Price increase: $${fmtNum(R2)}M ÷ $${rev}M − 1 ≈ ${a.toFixed(1)}%`] }; },
   () => { const cf = pick([4, 5, 6, 8, 10]), r = pick([8, 10, 12]), g = pick([0, 0, 2, 3]);
     const a = cf / ((r - g) / 100) * 1e6;
-    return { ctx: "Valuation · perpetuity", title: `An acquisition target generates $${cf}M of free cash flow next year${g ? `, growing ${g}% a year forever` : " forever, with no growth"}. At a ${r}% discount rate, what is it worth?`, a, unit: "$", tol: .02,
+    return { ctx: "Valuation · perpetuity", fx: ["perpetuity"], title: `An acquisition target generates $${cf}M of free cash flow next year${g ? `, growing ${g}% a year forever` : " forever, with no growth"}. At ${aPct(r)} discount rate, what is it worth?`, a, unit: "$", tol: .02,
       steps: [`Value = CF ÷ (r − g) = $${cf}M ÷ (${r}% − ${g}%)`, `= $${cf}M ÷ ${(r - g) / 100} ≈ ${money(a)}`] }; },
   () => { const mkt = pick([2, 3, 4, 5]), share = pick([4, 5, 6]), tgt = share + pick([2, 3, 4]), g = pick([0, 5, 10]);
     const now = mkt * share / 100, fut = mkt * Math.pow(1 + g / 100, 2) * tgt / 100; const a = (Math.sqrt(fut / now) - 1) * 100;
-    return { ctx: "Growth · market share target", title: `The market is $${mkt}B and grows ${g}% a year. Your client has ${share}% share. To hold ${tgt}% share in 2 years, what annual revenue growth (CAGR) does the client need?`, a, unit: "%", tol: .04, abs: .5,
+    return { ctx: "Growth · market share target", fx: ["marketShare", "compound", "cagr"], title: `The market is $${mkt}B and grows ${g}% a year. Your client has ${share}% share. To reach ${tgt}% share in 2 years, what annual revenue growth (CAGR) does the client need?`, a, unit: "%", tol: .04, abs: .5,
       steps: [`Client revenue now: $${mkt}B × ${share}% = $${fmtNum(now * 1e9)}`, `Market in 2 yrs: $${mkt}B × ${(1 + g / 100).toFixed(2)}² = $${fmtNum(mkt * Math.pow(1 + g / 100, 2) * 1e9)}`, `Target revenue: × ${tgt}% = $${fmtNum(fut * 1e9)}`, `CAGR = √(${fmtNum(fut * 1e9)} ÷ ${fmtNum(now * 1e9)}) − 1 ≈ ${a.toFixed(1)}%`] }; },
   () => { const stores = pick([200, 400, 600]), traffic = pick([800, 1000, 1200]), conv = pick([20, 25, 30]), ticket = pick([30, 40, 50]), days = 360;
     const a = stores * traffic * conv / 100 * ticket * days;
-    return { ctx: "Retail · revenue build", title: `A chain has ${stores} stores. Each sees ${traffic} visitors a day, ${conv}% buy, average ticket $${ticket}. Stores open ~360 days. Annual revenue?`, a, unit: "$", tol: .03,
+    return { ctx: "Retail · revenue build", fx: ["revenueBuild"], title: `A chain has ${stores} stores. Each sees ${traffic} visitors a day, ${conv}% buy, average ticket $${ticket}. Stores open ~360 days. Annual revenue?`, a, unit: "$", tol: .03,
       steps: [`Buyers per store per day: ${traffic} × ${conv}% = ${traffic * conv / 100}`, `Daily revenue per store: × $${ticket} = $${fmtNum(traffic * conv / 100 * ticket)}`, `Chain annual: × ${stores} × 360 ≈ ${money(a)}`] }; },
   () => { const fleet = pick([40, 60, 80]), seats = pick([180, 190]), flights = pick([5, 6]), lf = pick([80, 85, 90]), fare = pick([70, 90, 110]);
     const a = fleet * seats * flights * 365 * lf / 100 * fare;
-    return { ctx: "Airline · ticket revenue", title: `A low-cost carrier flies ${fleet} aircraft with ${seats} seats, ${flights} flights per aircraft per day, at an ${lf}% load factor and $${fare} average fare. Annual ticket revenue?`, a, unit: "$", tol: .03,
+    return { ctx: "Airline · ticket revenue", fx: ["loadFactor", "revenueBuild"], title: `A low-cost carrier flies ${fleet} aircraft with ${seats} seats, ${flights} flights per aircraft per day, at ${aPct(lf)} load factor and $${fare} average fare. Annual ticket revenue?`, a, unit: "$", tol: .03,
       steps: [`Seats flown per day: ${fleet} × ${seats} × ${flights} = ${fmtNum(fleet * seats * flights)}`, `Passengers per year: × 365 × ${lf}% = ${fmtNum(fleet * seats * flights * 365 * lf / 100)}`, `Revenue: × $${fare} ≈ ${money(a)}`] }; },
 ];
 function problemItem() {
   const p = pick(PROBLEMS)();
-  return { skill: "problem", type: "num", context: p.ctx, title: p.title, answer: p.a, unit: p.unit === "$" ? "" : p.unit, dollars: p.unit === "$", tol: p.tol, abs: p.abs || 0, steps: p.steps };
+  return { skill: "problem", type: "num", context: p.ctx, title: p.title, answer: p.a, unit: p.unit === "$" ? "" : p.unit, dollars: p.unit === "$", tol: p.tol, abs: p.abs || 0, steps: p.steps, fx: p.fx };
 }
 
 /* ============================================================
@@ -1343,6 +1369,82 @@ function closeWriteItem(c) {
 }
 
 /* ============================================================
+   Formulas + glossary
+   ============================================================ */
+const FORMULAS = {
+  profit: { term: "Profit", group: "Profitability", formula: "Revenue − costs = units × (price − variable cost) − fixed costs", note: "The profit tree behind every Metric Hunt exhibit.", ex: "200K units × ($50 − $30) − $2M = $2M" },
+  opMargin: { term: "Operating margin", group: "Profitability", formula: "Operating profit ÷ revenue", note: "Operating profit is revenue minus all operating costs (COGS plus SG&A), before interest and taxes.", ex: "$30M ÷ $250M = 12%" },
+  grossMargin: { term: "Gross margin", group: "Profitability", formula: "(Revenue − COGS) ÷ revenue", note: "Only the direct cost of making the product, not overhead.", ex: "($100M − $60M) ÷ $100M = 40%" },
+  contribMargin: { term: "Contribution margin", group: "Profitability", formula: "(Price − variable cost) ÷ price", note: "Per unit in dollars it's simply price − variable cost; that's what each unit contributes toward fixed costs.", ex: "($80 − $56) ÷ $80 = 30%" },
+  breakeven: { term: "Breakeven volume", group: "Profitability", formula: "Fixed costs ÷ (price − variable cost per unit)", note: "Units needed for contribution to cover fixed costs exactly.", ex: "$12M ÷ ($40 − $25) = 800K units" },
+  priceForMargin: { term: "Price for a target margin", group: "Profitability", formula: "Price = cost ÷ (1 − target margin)", note: "Margin is measured on price, not cost. A 25% margin on a $60 cost is $80, not $75 (that would be a 25% markup).", ex: "$60 ÷ (1 − 25%) = $80" },
+  revForMargin: { term: "Revenue needed for a target margin", group: "Profitability", formula: "Required revenue = costs ÷ (1 − target margin)", note: "With costs fixed, then price increase = required revenue ÷ current revenue − 1.", ex: "Costs $460M, target 12%: $460M ÷ 0.88 = $523M" },
+  markup: { term: "Markup vs. margin", group: "Profitability", formula: "Markup = profit ÷ cost · Margin = profit ÷ price", note: "Same dollars, different denominators. A 50% markup is a 33% margin.", ex: "Cost $60, price $90: markup 50%, margin 33%" },
+  pctChange: { term: "Percent change", group: "Growth", formula: "(New − old) ÷ old", note: "Always divide by the starting value.", ex: "80 → 92: 12 ÷ 80 = 15%" },
+  backOutBase: { term: "Backing out the base", group: "Growth", formula: "Prior value = current ÷ (1 + growth)", note: "Divide, don't subtract the percentage. $150M after +25% came from $120M, not $112.5M.", ex: "$150M ÷ 1.25 = $120M" },
+  stacked: { term: "Stacked percent changes", group: "Growth", formula: "Net change = (1 + a) × (1 + b) − 1", note: "Changes multiply, they don't add. +20% then −20% is −4%.", ex: "1.2 × 0.8 − 1 = −4%" },
+  ppts: { term: "Percentage points vs. percent", group: "Growth", formula: "Points = new % − old % · Percent = (new % − old %) ÷ old %", note: "8% → 10% is +2 points, or +25%.", ex: "Margin 8% → 10%: +2 pts, +25%" },
+  compound: { term: "Compound growth", group: "Growth", formula: "Future value = start × (1 + g)^years", note: "Shortcut for two years: (1 + g)² = 1 + 2g + g². 10% → 1.21.", ex: "$200M × 1.1² = $242M" },
+  cagr: { term: "CAGR", group: "Growth", formula: "CAGR = (end ÷ start)^(1 / years) − 1", note: "The constant yearly rate that turns start into end. Quick estimate: total growth ÷ years, then trim a little for compounding.", ex: "$100M → $150M in 4 yrs: 1.5^(1/4) − 1 ≈ 10.7%" },
+  rule72: { term: "Rule of 72", group: "Growth", formula: "Years to double ≈ 72 ÷ growth rate (in %)", note: "Works well for rates between about 4% and 20%.", ex: "9% growth: 72 ÷ 9 = 8 years" },
+  marketShare: { term: "Market share", group: "Growth", formula: "Company revenue ÷ total market revenue", note: "To hit a target share, target revenue = future market size × target share.", ex: "$150M ÷ $2B = 7.5%" },
+  payback: { term: "Payback period", group: "Investment & valuation", formula: "Upfront investment ÷ annual cash flow (or savings)", note: "Ignores the time value of money; quick screen, not a full NPV.", ex: "$12M ÷ $3M a year = 4 years" },
+  perpetuity: { term: "Perpetuity value", group: "Investment & valuation", formula: "Value = cash flow ÷ (discount rate − growth rate)", note: "With no growth, just cash flow ÷ discount rate. Uses next year's cash flow.", ex: "$5M ÷ (10% − 0%) = $50M" },
+  npv: { term: "NPV", group: "Investment & valuation", formula: "Σ cash flow in year t ÷ (1 + r)^t − upfront investment", note: "Positive NPV means the project earns more than the discount rate.", ex: "−$10M + $6M/1.1 + $6M/1.21 ≈ +$0.4M" },
+  ltv: { term: "Customer lifetime value (LTV)", group: "Unit economics", formula: "Margin per customer per period ÷ churn per period", note: "1 ÷ churn is the expected lifetime in periods.", ex: "$30 × 70% ÷ 2.5% = $840" },
+  cac: { term: "Customer acquisition cost (CAC)", group: "Unit economics", formula: "Sales & marketing spend ÷ new customers acquired", note: "Compare to LTV (healthy is often LTV ≥ 3× CAC) and to payback months.", ex: "$2M ÷ 8,000 = $250" },
+  arpu: { term: "ARPU", group: "Unit economics", formula: "Revenue ÷ average users (or subscribers)", note: "Revenue = subscribers × ARPU, a common way to split a revenue drop.", ex: "$48M ÷ 1M subs = $48 a year" },
+  takeRate: { term: "Take rate", group: "Unit economics", formula: "Marketplace revenue ÷ gross transaction value (GMV)", note: "Revenue can fall while GMV grows if take rate compresses.", ex: "$250M ÷ $1B = 25%" },
+  nii: { term: "Net interest income (NII)", group: "Banking", formula: "Loans × loan yield − deposits × deposit rate", note: "The core revenue line of a bank.", ex: "$20B × 6.5% − $18B × 2% = $0.94B" },
+  nim: { term: "Net interest margin (NIM)", group: "Banking", formula: "NII ÷ interest-earning assets", note: "Falls when deposit costs rise faster than loan yields.", ex: "$0.94B ÷ $20B = 4.7%" },
+  marketSize: { term: "Market sizing (top-down)", group: "Market sizing", formula: "Population × % who buy × units per buyer per year × price", note: "Round aggressively (330M → 300M is fine) and say your assumptions out loud.", ex: "330M × 40% × 2 cups × 365 × 20% × $4 ≈ $77B" },
+  revenueBuild: { term: "Revenue build (bottom-up)", group: "Market sizing", formula: "Units (locations × traffic × conversion) × average price", note: "Build from the drivers you can observe, then multiply out.", ex: "400 stores × 1,000 visits × 25% × $40 × 360 days ≈ $1.4B" },
+  revpar: { term: "RevPAR", group: "Industry metrics", formula: "Occupancy × average daily rate (ADR)", note: "Hotel revenue per available room; splits a drop into occupancy versus price.", ex: "75% × $160 = $120" },
+  loadFactor: { term: "Load factor", group: "Industry metrics", formula: "Seats sold ÷ seats available", note: "Airline revenue = seats flown × load factor × average fare.", ex: "153 ÷ 180 = 85%" },
+  shareOfDecline: { term: "Share of a change", group: "Diagnosis", formula: "Segment change ÷ total change", note: "Can exceed 100% when other segments moved the other way. Don't divide by total revenue.", ex: "−$47M ÷ −$60M = 78%" },
+  driverEffects: { term: "Price / volume / cost effects", group: "Diagnosis", formula: "Volume: Δunits × prior (price − var cost) · Price: Δprice × new units · Var cost: −Δunit cost × new units · Fixed: −Δfixed", note: "These sum exactly to the profit change. Use them to say which line moved and by how much before asking why.", ex: "Volume −100K × ($50 − $30) = −$2M" },
+};
+const GLOSSARY_GROUPS = ["Profitability", "Growth", "Investment & valuation", "Unit economics", "Banking", "Market sizing", "Industry metrics", "Diagnosis", "Industry terms"];
+function glossaryEntries() {
+  const covered = new Set(Object.values(FORMULAS).map(f => f.term.toLowerCase()));
+  const alias = { "nim": 1, "cac": 1, "ltv": 1, "cagr": 1, "breakeven": 1, "payback period": 1, "contribution margin": 1, "gross margin": 1, "revpar": 1, "load factor": 1, "take rate": 1, "market share": 1, "arpu": 1 };
+  const terms = TERMS.filter(([t]) => !covered.has(t.toLowerCase()) && !alias[t.toLowerCase()])
+    .map(([t, d]) => ({ term: t, group: "Industry terms", note: d }));
+  return [...Object.values(FORMULAS), ...terms];
+}
+function formulaHTML(keys) {
+  const fs = (keys || []).map(k => FORMULAS[k]).filter(Boolean);
+  if (!fs.length) return "";
+  return `<div class="formulas"><span class="eyebrow">Formula${fs.length > 1 ? "s" : ""}</span>${fs.map(f => `<div class="fline"><button class="linkbtn fterm" type="button" data-glossary="${esc(f.term)}" title="Look up ${esc(f.term)}">${esc(f.term)}</button><code>${esc(f.formula)}</code></div>`).join("")}<button class="linkbtn small" type="button" data-glossary="1">Open full glossary</button></div>`;
+}
+function openGlossary(query = "") {
+  if ($("#glossary")) return;
+  const el = document.createElement("div");
+  el.id = "glossary"; el.className = "gloss-back";
+  el.innerHTML = `<div class="gloss" role="dialog" aria-modal="true" aria-labelledby="glossTitle">
+    <div class="gloss-head"><h2 id="glossTitle">Glossary</h2><button class="btn sm" type="button" id="glossClose">Close <kbd>Esc</kbd></button></div>
+    <input id="glossSearch" type="search" placeholder="Search formulas and terms, e.g. CAGR, margin, NIM" aria-label="Search the glossary" value="${esc(query)}">
+    <div id="glossList" class="gloss-list"></div></div>`;
+  document.body.appendChild(el);
+  const all = glossaryEntries();
+  const render = () => {
+    const q = $("#glossSearch").value.trim().toLowerCase();
+    const hits = all.filter(e => !q || (e.term + " " + (e.formula || "") + " " + e.note + " " + e.group).toLowerCase().includes(q));
+    $("#glossList").innerHTML = GLOSSARY_GROUPS.map(g => {
+      const gs = hits.filter(e => e.group === g);
+      return gs.length ? `<section><h3>${esc(g)}</h3>${gs.map(e => `<div class="gentry"><b>${esc(e.term)}</b>${e.formula ? `<code>${esc(e.formula)}</code>` : ""}<p>${esc(e.note)}</p>${e.ex ? `<p class="gex">e.g. ${esc(e.ex)}</p>` : ""}</div>`).join("")}</section>` : "";
+    }).join("") || `<p class="muted">Nothing matches "${esc(q)}". Try a shorter word, like "margin" or "growth".</p>`;
+  };
+  $("#glossSearch").addEventListener("input", render);
+  $("#glossClose").addEventListener("click", closeGlossary);
+  el.addEventListener("click", e => { if (e.target === el) closeGlossary(); });
+  render();
+  $("#glossSearch").focus();
+}
+function closeGlossary() { const el = $("#glossary"); if (el) el.remove(); }
+document.addEventListener("click", e => { const b = e.target.closest("[data-glossary]"); if (b) openGlossary(b.dataset.glossary === "1" ? "" : b.dataset.glossary); });
+
+/* ============================================================
    Session building
    ============================================================ */
 let S = null;            // active session
@@ -1420,7 +1522,8 @@ function introSeen(cat) { try { return localStorage.getItem("caseCracker.intro."
 function markIntro(cat) { try { localStorage.setItem("caseCracker.intro." + cat, "1"); } catch (e) {} }
 function strategyHTML(C) {
   return `${C.intro ? `<div class="worked"><span class="eyebrow">Worked example</span><div class="wq">${esc(C.intro.example[0])}</div><ol>${C.intro.example.slice(1).map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
-    <ul class="stratlist">${C.strat.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    <ul class="stratlist">${C.strat.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    ${C.fx ? formulaHTML([...new Set(Object.values(C.fx).flat())]) : ""}`;
 }
 function renderIntro(cat) {
   S = null; clearInterval(timerId); screen = "intro";
@@ -1627,6 +1730,7 @@ function renderHome() {
 
     <footer class="foot">
       <span>Progress ${Store.col ? "syncs to your account" : "is saved in this browser"}.</span>
+      <button class="linkbtn" type="button" data-glossary="1">Formula glossary</button>
       <button class="linkbtn" type="button" id="backupBtn">Back up or restore</button>
     </footer>
     <div class="card backup" id="backupBox" hidden>
@@ -1995,12 +2099,15 @@ function answerNum(v) {
   if (q.sprint) {
     const f = $("#flash"); f.className = "flash " + (ok ? "ok" : "no");
     f.textContent = (ok ? `✓ ${shown}${fast && !S.bosses ? "  ·  under standard" : ""}` : `✗ ${shown}  ·  ${magNote || q.tip || ""}`) + bossMsg;
+    const fx0 = !ok && q.fx && q.fx[0] && FORMULAS[q.fx[0]];
+    if (fx0) { f.insertAdjacentHTML("beforeend", `<div class="flash-fx">${esc(fx0.term)}: <code>${esc(fx0.formula)}</code></div>`); delay += 1200; }
     $("#numIn").disabled = true;
     const me = S; setTimeout(() => { if (S === me) next(); }, delay); return;
   }
   $("#numIn").disabled = true;
   showFeedback(ok ? 1 : 0, `<div>Answer: <b class="num">${shown}</b>. You said <span class="num">${esc(v)}</span>.${magNote ? ` <b>${magNote}</b>` : ""}</div>
-    ${q.steps ? `<ul>${q.steps.map(s => `<li class="num" style="font-family:var(--body)">${esc(s)}</li>`).join("")}</ul>` : ""}
+    ${formulaHTML(q.fx)}
+    ${q.steps ? `<ul>${q.steps.map(s => `<li class="num" style="font-family:var(--body)">${esc(s)}</li>`).join("")}</ul>` : q.tip ? `<div class="muted">${esc(q.tip)}</div>` : ""}
     <span class="quip">+${r.gained} XP · ${(r.ms / 1000).toFixed(0)}s (partner pace: ${(SKILLS[q.skill].target / 1000).toFixed(0)}s)</span>`);
 }
 
@@ -2155,6 +2262,7 @@ function confetti() {
    ============================================================ */
 document.addEventListener("keydown", e => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;   // leave browser shortcuts alone
+  if ($("#glossary")) { if (e.key === "Escape") closeGlossary(); return; }
   const t = e.target, tag = (t.tagName || "").toLowerCase();
   const typing = tag === "input" || tag === "textarea";
   const onButton = tag === "button";

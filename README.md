@@ -48,6 +48,13 @@ Every answer is tracked per fact (e.g. `7×8`, `3/8`, `M×K`). The Math Gym scre
 a weakest-facts list you can drill directly, a recommended next category, and a strategy note for each
 category. Drills serve slow and missed facts more often.
 
+## Formulas and glossary
+
+Problem Solving and Math Gym case-operation answers show the formulas they use (e.g. CAGR, operating
+margin, breakeven, payback, LTV, NII). Each formula name opens its glossary entry. The Glossary button in
+the header opens a searchable list of every formula, with a plain-English note and a worked example, plus
+the industry terms from Lingo Lightning.
+
 ## Progress tracking
 
 Each answer is logged with accuracy and response time. The dashboard shows per-skill mastery
