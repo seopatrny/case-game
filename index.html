@@ -2095,7 +2095,7 @@ async function finish() {
     }).join("")}</div></div>`;
     // Strategy for the drill (single-category check) or for each category missed in a mixed run
     const stratCats = s.mode.startsWith("m:") ? [s.mode.slice(2)] : [...new Set(s.items.filter(i => i.c && i.ok < 1).map(i => i.c))].slice(0, 2);
-    mathBlock += stratCats.map(k => `<details class="stratbox" ${s.mode.startsWith("m:") ? "open" : ""}><summary>How to get faster at ${esc(MATH_CATS[k].name)}</summary>${strategyHTML(MATH_CATS[k])}</details>`).join("");
+    mathBlock += stratCats.map(k => `<details class="stratbox"><summary>How to get faster at ${esc(MATH_CATS[k].name)}</summary>${strategyHTML(MATH_CATS[k])}</details>`).join("");
   }
   $("#view").innerHTML = `
   <div class="wrap">
