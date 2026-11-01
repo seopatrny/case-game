@@ -345,6 +345,27 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .gentry p { font-size: .9rem; color: var(--muted); max-width: 70ch; }
 .gentry .gex { font-family: var(--mono); font-size: .8rem; }
 
+/* trading floor */
+.lrow { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.lnum { color: var(--muted); font-weight: 600; }
+.lmain { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lacc { color: var(--muted); min-width: 5.5em; text-align: right; }
+.lacts { display: flex; gap: 6px; }
+.lesson p { max-width: 72ch; }
+.lesson .worked { margin-bottom: 4px; }
+.wa { margin-top: 6px; font-size: .92rem; }
+.pairform { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.pairform label { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.pairform input { width: 8.5rem; font-family: var(--mono); font-size: 1.3rem; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+.pair-at { font-family: var(--display); font-weight: 700; padding-bottom: 10px; }
+.pair-size { padding-bottom: 12px; }
+.sim { border-left: 3px solid var(--accent); padding-left: 10px; font-size: .92rem; }
+@media (max-width: 680px) {
+  .lrow { grid-template-columns: 2rem minmax(0, 1fr) auto; }
+  .lrow .lacc { display: none; }
+  .lrow .lacts { grid-column: 2 / -1; }
+}
+
 @media (max-width: 680px) {
   .facts-layout { grid-template-columns: 1fr; }
   .hero, .hero.duo { grid-template-columns: 1fr; }
@@ -408,6 +429,8 @@ function parseNum(str) {
   if (str == null) return NaN;
   let s = String(str).trim().toLowerCase().replace(/[$,\s]/g, "").replace(/−/g, "-");
   if (!s) return NaN;
+  const fr = s.match(/^(-?\d*\.?\d+)\/(\d*\.?\d+)$/);
+  if (fr) return +fr[2] ? +fr[1] / +fr[2] : NaN;
   let mult = 1;
   const m = s.match(/(trillion|billion|million|thousand|bn|mm|tn|t|b|m|k|%|x|yrs?|years?)$/);
   if (m) {
@@ -477,6 +500,7 @@ const SKILLS = {
   lingo:   { name: "Industry vocabulary", short: "Vocab", target: 6000 },
   math:    { name: "Mental math", short: "Math", target: 12000 },
   problem: { name: "Case problem solving", short: "Problems", target: 90000 },
+  quant:   { name: "Probability & markets", short: "Quant", target: 45000 },
 };
 const MODES = {
   metric:  { name: "Metric Hunt", skill: "metric", tag: "Gap 1", blurb: "A P&L exhibit drops. Find which line moved, by how much, then say it first.", len: "3 exhibits · ~4 min" },
@@ -493,6 +517,9 @@ function modeName(m) {
   if (m && m.startsWith("m:") && MATH_CATS[m.slice(2)]) return MATH_CATS[m.slice(2)].name + " check";
   if (m === "weak") return "Weak-fact drill";
   if (m === "boss") return "Boss battle";
+  if (m && m.startsWith("q:") && QCON[m.slice(2)]) return QCON[m.slice(2)].name + " drill";
+  if (m === "qmix") return "Mixed quant drill";
+  if (m === "qmm") return "Market making";
   return m;
 }
 const RANKS = [
@@ -1404,13 +1431,14 @@ const FORMULAS = {
   shareOfDecline: { term: "Share of a change", group: "Diagnosis", formula: "Segment change ÷ total change", note: "Can exceed 100% when other segments moved the other way. Don't divide by total revenue.", ex: "−$47M ÷ −$60M = 78%" },
   driverEffects: { term: "Price / volume / cost effects", group: "Diagnosis", formula: "Volume: Δunits × prior (price − var cost) · Price: Δprice × new units · Var cost: −Δunit cost × new units · Fixed: −Δfixed", note: "These sum exactly to the profit change. Use them to say which line moved and by how much before asking why.", ex: "Volume −100K × ($50 − $30) = −$2M" },
 };
-const GLOSSARY_GROUPS = ["Profitability", "Growth", "Investment & valuation", "Unit economics", "Banking", "Market sizing", "Industry metrics", "Diagnosis", "Industry terms"];
+const GLOSSARY_GROUPS = ["Profitability", "Growth", "Investment & valuation", "Unit economics", "Banking", "Market sizing", "Industry metrics", "Diagnosis", "Probability", "Trading", "Industry terms"];
 function glossaryEntries() {
   const covered = new Set(Object.values(FORMULAS).map(f => f.term.toLowerCase()));
   const alias = { "nim": 1, "cac": 1, "ltv": 1, "cagr": 1, "breakeven": 1, "payback period": 1, "contribution margin": 1, "gross margin": 1, "revpar": 1, "load factor": 1, "take rate": 1, "market share": 1, "arpu": 1 };
   const terms = TERMS.filter(([t]) => !covered.has(t.toLowerCase()) && !alias[t.toLowerCase()])
     .map(([t, d]) => ({ term: t, group: "Industry terms", note: d }));
-  return [...Object.values(FORMULAS), ...terms];
+  const qterms = (typeof QTERMS !== "undefined" ? QTERMS : []).map(([t, d]) => ({ term: t, group: "Trading", note: d }));
+  return [...Object.values(FORMULAS), ...qterms, ...terms];
 }
 function formulaHTML(keys) {
   const fs = (keys || []).map(k => FORMULAS[k]).filter(Boolean);
@@ -1443,6 +1471,524 @@ function openGlossary(query = "") {
 }
 function closeGlossary() { const el = $("#glossary"); if (el) el.remove(); }
 document.addEventListener("click", e => { const b = e.target.closest("[data-glossary]"); if (b) openGlossary(b.dataset.glossary === "1" ? "" : b.dataset.glossary); });
+
+/* ============================================================
+   TRADING FLOOR: Probability & Markets
+   A lesson and a generated drill for every concept in the
+   Probability & Markets primer, in the primer's order.
+   ============================================================ */
+const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
+const fracStr = (n, d) => { const g = gcd(n, d) || 1; n /= g; d /= g; return d === 1 ? String(n) : `${n}/${d}`; };
+const dec = (x, d = 3) => String(+x.toFixed(d));
+const probShown = (n, d) => (Number.isInteger(n) && Number.isInteger(d) ? `${fracStr(n, d)} ≈ ${dec(n / d)}` : dec(n / d));
+const choose = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return Math.round(r); };
+const DIE = [1, 2, 3, 4, 5, 6];
+const PAIRS = DIE.flatMap(a => DIE.map(b => [a, b]));
+const DIE_EVENTS = [
+  { name: "even", t: x => x % 2 === 0 }, { name: "odd", t: x => x % 2 === 1 },
+  { name: "prime", t: x => [2, 3, 5].includes(x) }, { name: "a multiple of 3", t: x => x % 3 === 0 },
+  { name: "at least 4", t: x => x >= 4 }, { name: "at most 2", t: x => x <= 2 },
+  { name: "at least 5", t: x => x >= 5 }, { name: "at most 3", t: x => x <= 3 },
+];
+const outs = e => DIE.filter(e.t);
+const setStr = a => (a.length ? `{${a.join(", ")}}` : "none");
+
+// Item builders. Probability answers accept a fraction (3/7), a decimal (0.43) or a percent (42.9%).
+function probQ(c, f, title, n, d, steps, fx) {
+  return { skill: "quant", type: "num", c, f, title, answer: n / d, prob: true, tol: 0, abs: .006, shown: probShown(n, d), steps, fx, context: QCON[c].name };
+}
+function numQ(c, f, title, a, steps, fx, abs = .02, shown) {
+  return { skill: "quant", type: "num", c, f, title, answer: a, tol: 0, abs, shown: shown || dec(a), steps, fx, context: QCON[c].name };
+}
+function mcqQ(c, f, title, right, wrongs, explain) {
+  return { skill: "quant", type: "mcq", c, f, title, options: [right, ...wrongs], answer: 0, shuffle: true, explain, context: QCON[c].name };
+}
+const fromPool = (c, pool) => () => { const p = pick(pool); return mcqQ(c, p.f || "concept", p.q, p.a, p.d, p.why); };
+
+/* ---------- contracts for market making ---------- */
+const CONTRACTS = [
+  { name: "the roll of a d20 (pays $1 per pip)", ev: 10.5, w: 2, sample: () => ri(1, 20),
+    how: "A d20 is uniform on 1–20, so the average is the midpoint: (1 + 20) ÷ 2 = 10.5." },
+  { name: "the sum of two d6 rolls", ev: 7, w: 1.5, sample: () => ri(1, 6) + ri(1, 6),
+    how: "By linearity, E[sum] = 3.5 + 3.5 = 7." },
+  { name: "the maximum of three d6 rolls", ev: 1071 / 216, w: 1, sample: () => Math.max(ri(1, 6), ri(1, 6), ri(1, 6)),
+    how: "P[max ≤ k] = (k/6)³, so P[max = k] = (k³ − (k−1)³)/216. Summing k × that gives 1071/216 ≈ 4.96." },
+  { name: "a d6 roll where you (the holder) may reroll once", ev: 4.25, w: 1, sample: () => { const r = ri(1, 6); return r >= 4 ? r : ri(1, 6); },
+    how: "Keep 4, 5 or 6 (average 5); reroll 1–3 because a fresh roll averages 3.5. EV = ½ × 5 + ½ × 3.5 = 4.25." },
+  { name: "a d6 roll where the seller decides whether to reroll once", ev: 2.75, w: 1, sample: () => { const r = ri(1, 6); return r <= 3 ? r : ri(1, 6); },
+    how: "Who decides matters. The seller wants a low payout, so they keep 1–3 (average 2) and reroll 4–6 (fresh average 3.5). EV = ½ × 2 + ½ × 3.5 = 2.75." },
+  { name: "the square of a d6 roll", ev: 91 / 6, w: 3, sample: () => ri(1, 6) ** 2,
+    how: "E[X²] = (1 + 4 + 9 + 16 + 25 + 36) ÷ 6 = 91/6 ≈ 15.17. Note it's bigger than (E[X])² = 12.25." },
+  { name: "the minimum of two d6 rolls", ev: 91 / 36, w: .75, sample: () => Math.min(ri(1, 6), ri(1, 6)),
+    how: "P[min = k] = (13 − 2k)/36. Summing k × that gives 91/36 ≈ 2.53." },
+  { name: "the number of heads in 10 coin flips", ev: 5, w: 1, sample: () => Array.from({ length: 10 }, () => ri(0, 1)).reduce((a, b) => a + b, 0),
+    how: "Each flip contributes ½ head on average (an indicator with E = P = ½). By linearity, 10 × ½ = 5." },
+  { name: "1,000,000 times the roll of a d6 (dollars)", ev: 3.5e6, w: 1e6, sample: () => ri(1, 6) * 1e6, big: true,
+    how: "EV is 3.5 × $1M = $3.5M. But if your bid is hit and a 1 comes up you lose about $2.5M. When a loss is a big share of your capital, quote wider and for less size: risk matters, not just EV." },
+];
+function marketQ(c, contract, informed) {
+  return { skill: "quant", type: "market", c, f: informed ? "informed" : "market", contract, informed: !!informed, size: 10,
+    title: `Make a market on ${contract.name}.`, context: QCON[c].name };
+}
+
+/* ---------- the curriculum ---------- */
+const QCON = {
+  random: {
+    name: "Randomness", blurb: "Three kinds of uncertainty, three types of random quantities, one toolkit.",
+    lesson: {
+      idea: [
+        "Probability is a framework for making decisions when you don't know what will happen. Markets are full of that kind of uncertainty, so traders reason in probabilities constantly.",
+        "Uncertainty comes in three flavors that feel different but are handled the same way. **Objective randomness**: a fair die roll; everyone agrees on the odds. **One-off future events**: rain tomorrow; people can reasonably disagree because they hold different information or experience. **Knowable unknowns**: the temperature on Everest yesterday at noon; it already happened, but you don't know it, so it's still random *to you*.",
+        "Random quantities come in three types. **Binary**: yes or no (will it rain?). **Discrete**: one of a finite list of outcomes (a die roll; binary is a special case). **Continuous**: anything within a range (tomorrow's temperature).",
+      ],
+      formulas: [],
+      examples: [
+        { q: "A deck was shuffled a minute ago and is face down. Is the top card random?", steps: ["The order is already fixed, so nothing random is left to happen.", "But you don't know it, so it's a knowable unknown: treat it as random to you.", "Any specific card has probability 1/52."], a: "Yes, random to you." },
+        { q: "Classify: will the stock close up today, and what will its closing price be?", steps: ["Up or down is a yes/no question: binary.", "The closing price can be almost any value in a range: treat it as continuous."], a: "Binary, then continuous." },
+      ],
+      traps: ["Treating 'it already happened' as 'not random'. If you don't know it, reason about it with probability.", "Calling a binary quantity 'discrete' when the question asks for the most specific type."],
+    },
+  },
+  counting: {
+    name: "Counting", blurb: "Equally likely outcomes: count what works, divide by the total.",
+    lesson: {
+      idea: [
+        "When there is a finite number of outcomes, each equally likely, a probability is just a count: the number of outcomes that meet the criteria divided by the total number of outcomes.",
+        "With two dice, think of one red and one blue. There are 6 × 6 = 36 equally likely ordered outcomes; red 1 + blue 6 is different from red 6 + blue 1. The **sums are not equally likely**: a 7 can be made 6 ways, a 2 only 1 way.",
+        "When outcomes aren't equally likely, imagine more outcomes that are. A quantity that is 0 with 30%, 1 with 20% and 2 with 50% is like drawing one of 10 equally likely tickets: 3 say 0, 2 say 1, 5 say 2.",
+      ],
+      formulas: ["probCount", "diceSums"],
+      examples: [
+        { q: "Roll a d6. P[prime]?", steps: ["Primes on a die: 2, 3, 5.", "3 of 6 equally likely outcomes."], a: "3/6 = 1/2" },
+        { q: "Roll two d6. P[sum is 7]?", steps: ["Trap: there are 11 possible sums, but they are not equally likely, so 1/11 is wrong.", "Count ordered pairs: (1,6) (2,5) (3,4) (4,3) (5,2) (6,1) = 6 ways.", "6 of 36."], a: "6/36 = 1/6" },
+        { q: "Roll two d6. P[sum is 10]?", steps: ["Pairs: (4,6), (5,5), (6,4).", "(5,5) can't be flipped, so it counts once.", "3 of 36."], a: "3/36 = 1/12" },
+      ],
+      traps: ["Counting unordered combinations ({1,6} once) instead of ordered outcomes.", "Assuming every possible value (like each sum) is equally likely."],
+    },
+  },
+  prob: {
+    name: "Probability rules", blurb: "Outcomes, sets, unions and complements.",
+    lesson: {
+      idea: [
+        "Distinct outcomes are mutually exclusive: if one happens, the others don't. Every outcome gets a probability of at least 0, and the probabilities of all outcomes sum to 1.",
+        "An event is a set of outcomes (a die roll can be both even and prime). Its probability is the sum of the probabilities of the outcomes in it, so Venn-diagram logic applies.",
+        "Two rules do most of the work. **Union**: P[A or B] = P[A] + P[B] − P[A and B]; subtract the overlap or you count it twice. **Complement**: P[not A] = 1 − P[A]. 'At least one' questions are almost always easiest through the complement.",
+      ],
+      formulas: ["union", "complement"],
+      examples: [
+        { q: "Roll a d6. P[even or prime]?", steps: ["Even: {2, 4, 6} = 3/6. Prime: {2, 3, 5} = 3/6.", "Both: {2} = 1/6.", "3/6 + 3/6 − 1/6 = 5/6."], a: "5/6" },
+        { q: "Roll a d6 four times. P[at least one 6]?", steps: ["Complement: no 6 in any roll = (5/6)⁴ ≈ 0.482.", "1 − 0.482."], a: "≈ 0.518" },
+      ],
+      traps: ["Adding P[A] + P[B] when the events overlap.", "Computing 'at least one' directly instead of 1 − P[none]."],
+    },
+  },
+  indep: {
+    name: "Independence", blurb: "When one outcome tells you nothing about another, multiply.",
+    lesson: {
+      idea: [
+        "Two outcomes are **independent** when the probability of one is unaffected by the other: coin flips don't care about the weather, and the second die doesn't care about the first.",
+        "For independent outcomes, P[A and B] = P[A] × P[B]. That's why each of the 36 two-dice outcomes has probability 1/6 × 1/6 = 1/36, and P[even on first, odd on second] = 1/2 × 1/2 = 1/4.",
+        "Drawing cards **with replacement** keeps draws independent. **Without replacement**, the deck changes, so multiply by the conditional probability of the second draw given the first.",
+      ],
+      formulas: ["indep", "withoutRepl"],
+      examples: [
+        { q: "Two face cards, drawing with replacement?", steps: ["12 face cards (J, Q, K × 4 suits) of 52.", "Independent draws: 12/52 × 12/52."], a: "9/169 ≈ 0.053" },
+        { q: "Two clubs, drawing without replacement?", steps: ["First club: 13/52.", "Given that, 12 clubs remain of 51: 12/51.", "13/52 × 12/51."], a: "1/17 ≈ 0.059" },
+        { q: "P[the product of 2 d6 rolls is odd]? 3 rolls?", steps: ["A product is odd only if every factor is odd.", "Each roll is odd with probability 1/2, independently.", "2 rolls: (1/2)² = 1/4. 3 rolls: (1/2)³ = 1/8."], a: "1/4 and 1/8" },
+      ],
+      traps: ["Multiplying probabilities of dependent events (like draws without replacement) as if independent."],
+    },
+  },
+  rv: {
+    name: "Random variables", blurb: "Numbers attached to outcomes, and their distributions.",
+    lesson: {
+      idea: [
+        "Attach a number to each outcome (pips on a die, a future price, a bet's payout) and the unknown number is a **random variable**. The list of possible values with their probabilities is its **distribution**.",
+        "A **uniform** distribution makes every value equally likely: one d6 is uniform, the sum of two d6 is not. Two random variables can share a distribution without being equal: red and blue dice have the same distribution but usually show different numbers. They're **independent** if learning one tells you nothing about the other.",
+        "You can build new random variables from old ones: B + R, B × R, Celsius C = (F − 32) × 5/9, or a commute of D minutes driving plus T minutes on the train, D + T.",
+      ],
+      formulas: ["distribution", "maxDice", "linearTransform"],
+      examples: [
+        { q: "Are B + R and B × R independent?", steps: ["Learn that B + R = 2. Then both dice are 1, so B × R must be 1.", "Knowing one changed what you know about the other."], a: "No, they're dependent." },
+        { q: "Two dice. P[the larger roll is 6]?", steps: ["P[max ≤ k] = (k/6)², so P[max = k] = (k² − (k−1)²)/36 = (2k − 1)/36.", "k = 6: 11/36."], a: "11/36 ≈ 0.306" },
+      ],
+      traps: ["Confusing 'same distribution' with 'same value'.", "Assuming the sum of uniform variables is uniform."],
+    },
+  },
+  ev: {
+    name: "Expected value", blurb: "The average outcome, and the properties that make it easy.",
+    lesson: {
+      idea: [
+        "The **expected value** E[X] is the average of a random variable: add up each value times its probability. A d6 averages 3.5; you can also see that from symmetry, since the outcomes are centered on 3.5.",
+        "**Linearity**: E[X + Y] = E[X] + E[Y], even when X and Y are dependent. If X and Y are independent, E[X × Y] = E[X] × E[Y]; for a constant x, E[xY] = x × E[Y].",
+        "**Indicators**: let 1_A be 1 if event A happens and 0 if not. Then E[1_A] = P[A]. A bet paying x if you win and y (probably negative) if you lose is y + (x − y) × 1_A, so its expected payout is y + (x − y) × P[win].",
+        "**Law of large numbers**: over many independent bets, your average result gets closer to the average of the expected values. That's why EV drives trading decisions.",
+      ],
+      formulas: ["ev", "linearity", "indicator", "betEV"],
+      examples: [
+        { q: "A die is reweighted so 6 comes up half the time. Expected value?", steps: ["The other five faces share the remaining ½ equally: 1/10 each.", "(1 + 2 + 3 + 4 + 5) × 1/10 + 6 × ½ = 1.5 + 3."], a: "4.5" },
+        { q: "The 6 on a die is replaced by a 12. Expected value?", steps: ["(1 + 2 + 3 + 4 + 5 + 12) ÷ 6 = 27 ÷ 6."], a: "4.5" },
+        { q: "Find X, Y where E[XY] ≠ E[X] × E[Y].", steps: ["Let X = Y = the same die roll (not independent).", "E[X × X] = (1 + 4 + 9 + 16 + 25 + 36) ÷ 6 = 91/6 ≈ 15.17.", "E[X] × E[Y] = 3.5² = 12.25."], a: "15.17 ≠ 12.25" },
+      ],
+      traps: ["Using E[XY] = E[X]E[Y] when X and Y are dependent.", "Thinking linearity needs independence. It doesn't."],
+    },
+  },
+  ci: {
+    name: "Confidence intervals", blurb: "Describing the range of outcomes, and fixing overconfidence.",
+    lesson: {
+      idea: [
+        "The average isn't everything; before a trade you also want to know how bad it can get. Three ways to describe spread: the literal **minimum and maximum** (1 and 6 for a die, however it's weighted); the **average deviation** from the mean, using |x − μ| or (x − μ)²; and a **confidence interval**.",
+        "A confidence interval is any continuous range that contains a stated share of the outcomes. For a uniform number from 0 to 100, [0, 90], [1, 91] and [5, 95] are all 90% intervals; sometimes you want the narrowest one.",
+        "People are **overconfident**: of their 95% intervals, fewer than 95% contain the truth. Practice on facts you can check and track your hit rate. Correct for it, but don't go overboard into uselessly wide ranges.",
+      ],
+      formulas: ["ciDef", "deviation"],
+      examples: [
+        { q: "Give a 95% interval for the number of taxis in New York City.", steps: ["Anchor: about 8 million people; busy cities might have one cab per few hundred to a thousand residents.", "That suggests roughly 8,000 to 30,000; widen a bit for safety.", "Check: NYC has 13,587 yellow taxi medallions, a number fixed by law."], a: "e.g. [7,000, 35,000] contains 13,587 ✓" },
+        { q: "Narrowest 90% interval for a uniform number from 0 to 100?", steps: ["Every 90-wide interval holds 90% of the outcomes.", "So the narrowest has width 90, e.g. [0, 90] or [5, 95]."], a: "Width 90" },
+      ],
+      traps: ["Giving narrow, precise-sounding ranges. Your 90% intervals should miss about 1 time in 10, not 4."],
+    },
+  },
+  cond: {
+    name: "Conditional probability", blurb: "Updating beliefs when you learn something.",
+    lesson: {
+      idea: [
+        "Your probability for something is a **prior**. When you learn new information, you **update**. If you guessed London was 60°F and then heard it's snowing, you'd guess much colder.",
+        "Conditioning shrinks the set of possible outcomes and rescales what's left. Given a d6 roll is at least 4, only 4, 5 and 6 remain, still equally likely, each 1/3. The expected value becomes 5.",
+        "The formula: P[A | B] = P[A and B] ÷ P[B], the probability of A given B. In a Venn diagram, it's the overlap as a share of B's circle.",
+      ],
+      formulas: ["condProb", "bayes"],
+      examples: [
+        { q: "P[roll = 5 | roll ≥ 4]?", steps: ["P[5 and ≥4] = 1/6. P[≥4] = 1/2.", "(1/6) ÷ (1/2)."], a: "1/3" },
+        { q: "Flip 3 coins. P[exactly 2 heads | at least 1 tail]?", steps: ["8 outcomes. At least one tail: all but HHH = 7/8.", "Exactly 2 heads (which forces one tail): HHT, HTH, THH = 3/8.", "(3/8) ÷ (7/8)."], a: "3/7 ≈ 0.429" },
+        { q: "Expected value of a d6 given it's prime? P[≤ 3 | prime]?", steps: ["Primes: 2, 3, 5, equally likely.", "EV = (2 + 3 + 5) ÷ 3 = 10/3 ≈ 3.33.", "Of those, 2 and 3 are ≤ 3: 2/3."], a: "10/3 and 2/3" },
+      ],
+      traps: ["Dividing by the total (36, 8) instead of by the conditioning event.", "Forgetting the remaining outcomes keep their relative likelihoods."],
+    },
+  },
+  markets: {
+    name: "Making markets", blurb: "Bids, offers, fills, and pricing with expected value.",
+    lesson: {
+      idea: [
+        "A trade needs a direction (buy or sell), a price and a **size** (quantity). A **bid** is an order to buy; an **offer** is an order to sell. \"**2 bid for 10**\" means you'll buy 10 at $2. \"**10 at 4**\" means you'll sell 10 at $4. Willing to do both for the same size? Say \"**2 at 4, 10 up**.\"",
+        "Your order stands until it trades or you say \"**I'm out**.\" Someone **hits** your bid by saying \"**sold**\" and **lifts** your offer with \"**take 'em**\"; both trade the full size. \"**I buy 5**\" or \"**I sell 5**\" trades a **partial** amount. A trade against your order is a **fill**; any unfilled remainder stays live.",
+        "Strategy: if you know the expected value, buy below it and sell above it. Then ask: can I lose a lot, and how bad is that? (If a loss is a big share of your capital, trade smaller or quote wider; you need capital for future opportunities.) And how much am I making? Bidding exactly the EV earns nothing; bidding $1 on a $3.50 contract means nobody sells to you. Balance the chance of trading against the edge per trade.",
+        "For a contract paying $1 per pip of a d6, EV = 3.5, and a reasonable market is \"3 at 4, 10 up.\"",
+      ],
+      formulas: ["edge", "pnl"],
+      examples: [
+        { q: "Make a market on a d20 roll.", steps: ["EV = (1 + 20) ÷ 2 = 10.5.", "Quote around it with some edge: 9.5 at 11.5, 10 up."], a: "e.g. 9.5 at 11.5" },
+        { q: "Make a market on the maximum of 3 d6 rolls.", steps: ["P[max ≤ k] = (k/6)³.", "EV = Σ k × (k³ − (k−1)³)/216 = 1071/216 ≈ 4.96.", "e.g. 4.5 at 5.4."], a: "EV ≈ 4.96" },
+        { q: "A d6 with one optional reroll. Who decides, and does it matter?", steps: ["If you (the buyer) decide: reroll 1–3. EV = ½ × 5 + ½ × 3.5 = 4.25.", "If the seller decides: they reroll 4–6. EV = ½ × 2 + ½ × 3.5 = 2.75.", "Same dice, very different value: always ask who holds the option."], a: "4.25 vs 2.75" },
+        { q: "The temperature in an hour?", steps: ["No formula: estimate from the current temperature and the trend (it rarely moves more than a few degrees in an hour).", "Quote a tight market around your estimate, e.g. current 60°F → 59 at 61."], a: "Center on now, tight width" },
+        { q: "1,000,000 × a d6 roll. How would you feel if your bid were hit and it rolled a 1?", steps: ["EV is $3.5M, but buying at ~$3.4M and rolling a 1 loses $2.4M.", "That's likely a large share of your capital: quote wider and smaller."], a: "Risk changes the quote, not just EV" },
+      ],
+      traps: ["Mixing up hit (you buy at your bid) and lift (you sell at your offer).", "Quoting a market that doesn't contain the expected value."],
+    },
+  },
+  adverse: {
+    name: "Adverse selection", blurb: "The trades you get are worse than they look.",
+    lesson: {
+      idea: [
+        "You're trading against a person who is presumably at least as good at this as you. If someone buys from you, they thought selling to them was a good idea for *them*, which should make you wary.",
+        "Ask why they're trading. Are they making their own EV calculation? That's scary: you may have made a mistake. Or do they care less about price (a long-term investor, or an interviewer committed to trading to make the game interesting)?",
+        "**Adverse selection**: the trades you get to do are worse than they appear, because the other side selects into them. Be most careful when the value is hard to determine (don't trade next week's weather with a meteorologist); worry less when the value is clear (buying a d6 roll for $3 is fine).",
+        "This is conditional probability in action. When your order is filled, **update**: if you bought, the value is probably a bit lower than you thought. Before quoting, ask: \"Conditional on being filled, what's the value, and am I still happy?\" Groucho Marx put it as: \"I don't want to belong to any club that will accept me as a member.\"",
+      ],
+      formulas: ["condFill"],
+      examples: [
+        { q: "A card from 1–10 is drawn. Your counterparty sees it and buys only when it's worth more than your offer of 6. What do you expect to make?", steps: ["They buy only when the card is 7, 8, 9 or 10.", "Given a fill, E[card | card > 6] = (7 + 8 + 9 + 10) ÷ 4 = 8.5.", "You sold at 6: expected P&L = 6 − 8.5 = −2.5 per contract."], a: "−2.5 per contract" },
+      ],
+      traps: ["Celebrating a fill without asking why the other side wanted it.", "Quoting tight markets on things the other side knows better."],
+    },
+  },
+  tools: {
+    name: "Problem-solving tools", blurb: "Recursion, memorylessness, edge cases and small cases.",
+    lesson: {
+      idea: [
+        "Repeated games often lead to infinite sums. Instead of summing, **set up a recursion**. Flip until heads: you spend 1 flip, then with probability ½ you're done and with probability ½ you're back where you started. E = 1 + ½ × 0 + ½ × E, so E = 2. In general, something with probability p takes 1/p tries on average.",
+        "This works because coin flips are **memoryless**: the future looks the same no matter what happened before.",
+        "**Edge cases**: test a general answer with extreme inputs (0, 1, a negative, infinity). Does anything blow up or exceed 1? **Small cases**: stuck on 100 players? Solve 2 players, then add one and see what changes.",
+      ],
+      formulas: ["geometric", "headRuns", "recursion"],
+      examples: [
+        { q: "Flip a coin until you see heads. Expected flips?", steps: ["E = 1 + ½ × 0 + ½ × E (memoryless).", "½E = 1, so E = 2.", "Same as the series ½ × 1 + ¼ × 2 + ⅛ × 3 + … = 2."], a: "2" },
+        { q: "Expected flips to see 3 heads in a row?", steps: ["Build up. 1 head: E₁ = 2.", "To get n in a row: reach n−1 in a row, flip once more; half the time you're done, half the time you start over: Eₙ = Eₙ₋₁ + 1 + ½ × Eₙ, so Eₙ = 2Eₙ₋₁ + 2.", "E₂ = 6, E₃ = 14."], a: "14" },
+        { q: "You derive P[at least one 6 in n rolls] = n/6. Check it.", steps: ["Edge case n = 7 gives 7/6 > 1: impossible.", "The correct answer is 1 − (5/6)ⁿ."], a: "Edge case exposes the error" },
+      ],
+      traps: ["Grinding an infinite series when a one-line recursion solves it.", "Not sanity-checking with n = 0, 1 or very large n."],
+    },
+  },
+  interview: {
+    name: "Interview thoughts", blurb: "What interviewers actually look for.",
+    lesson: {
+      idea: [
+        "**Myth: you must be great at mental math.** Numeracy helps, both to reach an answer and to check it's reasonable (order of magnitude!), but nobody expects instant two-digit multiplication.",
+        "**Myth: you must know complicated math.** Questions are built to be reasoned through with little outside knowledge, and the simple, intuitive answer is often preferred to one that leans on obscure theorems.",
+        "**Myth: a wrong answer fails you.** The interview is a collaboration. Ask clarifying questions. What matters is how you think, take hints and respond to being wrong. The flip side: a right answer isn't enough; explain how you got there and expect follow-ups.",
+        "**Myth: you should act a certain way.** Be yourself. It's fine to say you're unsure, and better to take your time and reach a good answer than to blurt out the first thing that comes to mind (unless asked to).",
+      ],
+      formulas: [],
+      examples: [
+        { q: "Your interviewer hints that your approach is off. What now?", steps: ["Say what you understood from the hint and why it changes things.", "Re-plan out loud; how you respond to being wrong is part of what's assessed."], a: "Engage with the hint, think aloud" },
+      ],
+      traps: ["Racing to a number without explaining the reasoning.", "Freezing instead of asking a clarifying question."],
+    },
+  },
+};
+const QORDER = Object.keys(QCON);
+
+/* ---------- concept MCQ pools ---------- */
+const TYPE_POOL = [
+  ["Will it rain in Chicago tomorrow?", "Binary", "It's a yes/no question."],
+  ["Tomorrow's high temperature in Chicago", "Continuous", "It can be any value in a range."],
+  ["The number of heads in 10 coin flips", "Discrete", "It's one of 11 values, 0 through 10."],
+  ["Whether a stock closes up today", "Binary", "Up or not up: yes/no."],
+  ["The exact time the next train arrives", "Continuous", "Time can take any value in a range."],
+  ["The suit of the top card of a shuffled deck", "Discrete", "One of four outcomes."],
+  ["The roll of a d20", "Discrete", "One of 20 outcomes."],
+  ["The weight of a randomly chosen apple, in grams", "Continuous", "Weight varies smoothly within a range."],
+  ["Whether a coin lands heads", "Binary", "Binary is a special case of discrete; the most specific answer is binary."],
+  ["The number of customers in a store at noon", "Discrete", "A whole-number count."],
+];
+const KIND_POOL = [
+  ["The roll of a fair die you're about to throw", "Objective randomness", "Everyone agrees on the odds, and nothing but the roll affects the outcome."],
+  ["Who wins next year's World Series", "One-off future event", "People can reasonably disagree, depending on their information and judgment."],
+  ["The temperature at the top of Mount Everest yesterday at noon", "Knowable unknown", "It already happened, but you don't know it, so it's random to you."],
+  ["The card on top of a deck that was just shuffled, face down", "Knowable unknown", "The order is fixed; you just don't know it."],
+  ["Whether it rains in London tomorrow", "One-off future event", "A single future event where forecasts can differ."],
+  ["A coin that has been flipped and is covered by a hand", "Knowable unknown", "The outcome is fixed but unknown to you."],
+  ["The result of spinning a fair roulette wheel", "Objective randomness", "Physical randomness with agreed odds."],
+  ["The population of Peru", "Knowable unknown", "A fact you could look up; until then, reason about it with probability."],
+  ["Whether a company beats earnings next quarter", "One-off future event", "A one-time future outcome where views differ."],
+];
+const POOLS = {
+  random: [
+    { q: "Someone says: \"Last night's game already happened, so there's no probability involved.\" Right?", a: "No: you don't know the result, so it's random to you", d: ["Yes: only future events can be random", "Yes, unless the game went to overtime", "No: but only because sports are inherently unpredictable"], why: "A knowable unknown is still uncertain to you, so you should reason about it with probability." },
+    { q: "Why can two people sensibly give different probabilities for rain tomorrow?", a: "They hold different information or experience", d: ["One of them must be making a math error", "Probabilities only exist for repeatable events", "Weather is objectively random, so both are wrong"], why: "One-off future events depend on information and judgment, so reasonable people can differ." },
+  ],
+  prob: [
+    { q: "Which list could be the probabilities of a die's six outcomes?", a: "0.1, 0.1, 0.2, 0.2, 0.2, 0.2", d: ["0.2, 0.2, 0.2, 0.2, 0.2, 0.2", "0.5, 0.5, 0, 0, 0, 0.1", "0.3, 0.3, 0.3, 0.3, −0.2, 0"], why: "Probabilities must each be at least 0 and sum to exactly 1. Only the first list does both." },
+    { q: "Why do you subtract P[A and B] in P[A or B]?", a: "Outcomes in both A and B would otherwise be counted twice", d: ["Because A and B are independent", "To make the result smaller than 1/2", "Because P[A and B] is always zero"], why: "The overlap sits inside both P[A] and P[B]; subtracting it once corrects the double count." },
+  ],
+  rv: [
+    { q: "Are B + R and B × R (the sum and product of a blue and a red die) independent?", a: "No: if B + R = 2, then B × R must be 1", d: ["Yes: they're built from independent dice", "Yes: sums and products never affect each other", "Only if both dice are fair"], why: "Learning the sum changes what you know about the product, so they're dependent." },
+    { q: "Is the sum of two d6 rolls uniformly distributed?", a: "No: 7 is six times as likely as 2", d: ["Yes: each die is uniform", "Yes: every sum from 2 to 12 is possible", "Only if the dice are different colors"], why: "Uniform means every value equally likely. Sums near 7 have more ways to occur." },
+    { q: "A red and a blue die have the same distribution. What does that mean?", a: "Each has the same probabilities for 1–6, though they usually show different numbers", d: ["They always show the same number", "Their sum is uniform", "They must be dependent"], why: "Same distribution means same probabilities, not the same value." },
+    { q: "Are B + R and B − R independent?", a: "No: if B + R = 12, then B − R must be 0", d: ["Yes: one adds and one subtracts", "Yes: their averages are 7 and 0", "Only when B = R"], why: "An extreme sum forces the difference, so learning one tells you about the other." },
+  ],
+  ev: [
+    { q: "Does E[X + Y] = E[X] + E[Y] require X and Y to be independent?", a: "No: linearity holds for any X and Y", d: ["Yes, always", "Only for discrete random variables", "Only if X and Y have the same distribution"], why: "Linearity of expectation never needs independence, which is why it simplifies so much." },
+    { q: "What does the law of large numbers say about many independent bets?", a: "Your average result approaches the average of their expected values", d: ["You'll eventually win back any losses", "Each bet becomes more likely to win", "Your total profit equals the sum of EVs exactly"], why: "Averages converge to expectations over many trials; it doesn't guarantee exact totals or 'catching up'." },
+    { q: "When does E[X × Y] = E[X] × E[Y] fail?", a: "When X and Y are dependent, e.g. X = Y = the same die", d: ["When X and Y are independent", "Whenever X and Y can be negative", "It never fails"], why: "For X = Y = a die, E[X²] = 91/6 ≈ 15.17 but E[X]² = 12.25." },
+  ],
+  ci: [
+    { q: "You gave twenty 90% intervals and 13 contained the truth. What does that suggest?", a: "You're overconfident: widen your intervals", d: ["You're well calibrated", "You're underconfident: narrow your intervals", "Nothing; twenty is too few to say anything"], why: "90% intervals should hit about 18 of 20. Hitting 13 (65%) means they're too narrow." },
+    { q: "For a uniform number from 0 to 100, which is NOT a 90% confidence interval?", a: "[10, 95]", d: ["[0, 90]", "[5, 95]", "[10, 100]"], why: "[10, 95] is only 85 wide, so it holds 85% of outcomes. The others are each 90 wide." },
+    { q: "What are the minimum and maximum of a die weighted heavily toward 6?", a: "1 and 6", d: ["5 and 6", "3.5 and 6", "It depends on the weights"], why: "Min and max are the extreme possible values, regardless of how likely they are." },
+  ],
+  markets: [
+    { q: "What does \"I'm out\" mean?", a: "You cancel your orders; nobody can trade on them anymore", d: ["You sold everything you own", "You're leaving the trading floor", "You accept the last trade"], why: "Orders stay live until they trade or you say you're out." },
+    { q: "Lifting an offer means:", a: "Buying at the offer price", d: ["Selling at the offer price", "Raising the offer price", "Cancelling the offer"], why: "You lift an offer by saying \"take 'em\": you buy at their offer." },
+    { q: "Hitting a bid means:", a: "Selling at the bid price", d: ["Buying at the bid price", "Raising the bid", "Cancelling the bid"], why: "You hit a bid by saying \"sold\": you sell to them at their bid." },
+    { q: "Why not just bid exactly the expected value?", a: "You'd break even on average and earn nothing for your risk", d: ["It's against the rules", "Nobody would ever sell to you", "Bidding the EV guarantees a loss"], why: "Profit comes from the edge between your price and the EV, balanced against how often you trade." },
+    { q: "Why might you quote a d6 × $1,000,000 contract wider than a plain d6?", a: "A bad outcome could lose a large share of your capital", d: ["Its expected value is uncertain", "Bigger numbers are harder to compute", "Wider quotes always earn more"], why: "Risk matters when losses are large relative to capital; you need capital for future trades." },
+  ],
+  adverse: [
+    { q: "You quote tomorrow's rainfall and a meteorologist instantly lifts your offer. What should you think?", a: "They likely know it's worth more: raise your estimate", d: ["Great trade: you sold at your price", "Nothing; trades are random", "Lower your offer to trade again"], why: "A fill from someone better informed is information. Conditional on the fill, the value is probably above your offer." },
+    { q: "Who is better to trade against, all else equal?", a: "A long-term investor who cares little about the exact price", d: ["A specialist who just modeled this contract", "Someone who only trades when they know more", "A trader who always picks the best side"], why: "Adverse selection is weakest when the other side's motive isn't pricing edge." },
+    { q: "When should you worry most about adverse selection?", a: "When the value is hard to determine and others may know more", d: ["When the contract is a simple die roll", "When the market is very busy", "When your quote is very wide"], why: "Complicated or uncertain values are where informed traders can pick you off." },
+    { q: "What does Groucho Marx's \"I don't want to belong to any club that will accept me\" illustrate?", a: "Being accepted (filled) is itself bad news about the deal", d: ["Exclusive clubs are poor investments", "You should never trade", "Popular trades are always profitable"], why: "Getting filled tells you the other side liked the trade, so update against yourself." },
+    { q: "Your bid was hit. How should you update?", a: "The value is probably a bit lower than you thought", d: ["The value is probably higher than you thought", "No update; the price was fair", "Raise your bid to buy more"], why: "Someone chose to sell to you at your bid, which is evidence the value is below it." },
+  ],
+  tools: [
+    { q: "Which equation gives the expected flips E until the first heads?", a: "E = 1 + ½ × 0 + ½ × E", d: ["E = ½ × 1 + ½ × 2", "E = 1 + E", "E = ½ × E"], why: "You always spend one flip; half the time you're done, half the time you're back at the start." },
+    { q: "Why can you reuse E on the right side of the flip-until-heads equation?", a: "Flips are memoryless: after a tail, the future looks identical", d: ["Because E is always 2", "Because tails are less likely after heads", "Because the series is finite"], why: "Memorylessness means the situation after a failure is the same as at the start." },
+    { q: "You derive a formula for a game with n players. What's a good first check?", a: "Plug in n = 1 or 2, where you can verify by hand", d: ["Plug in n = 100", "Check that it's symmetric", "Assume it's right if the algebra was careful"], why: "Small and edge cases are easy to verify and often expose mistakes or suggest the pattern." },
+  ],
+  interview: [
+    { q: "Myth or fact: you must multiply two-digit numbers in your head in 5 seconds.", a: "Myth: numeracy helps, but speed like that isn't judged harshly", d: ["Fact: speed is the main signal", "Fact: calculators are banned so speed is everything", "Myth: math doesn't matter at all"], why: "Numeracy helps with answers and sanity checks (order of magnitude), but nobody expects instant mental multiplication." },
+    { q: "Myth or fact: getting the wrong answer means you failed.", a: "Myth: they care how you think, take hints and respond to being wrong", d: ["Fact: only correct answers count", "Fact: one mistake ends the interview", "Myth: answers don't matter at all"], why: "It's a collaboration; reasoning and response to feedback matter. But a right answer alone isn't enough either." },
+    { q: "Myth or fact: you should use advanced theorems to impress.", a: "Myth: the simple, intuitive answer is often preferred", d: ["Fact: advanced math signals strength", "Fact: intuitive answers are considered lucky", "Myth: math knowledge is irrelevant"], why: "Questions are designed to be reasoned through with minimal outside knowledge." },
+    { q: "You're unsure about a question. What should you do?", a: "Say so, ask a clarifying question, and take your time", d: ["Answer immediately to look confident", "Guess and move on", "Stay silent until you're certain"], why: "Being yourself and taking time to reach a better answer beats blurting the first idea." },
+    { q: "You got the right answer. What else will the interviewer want?", a: "An explanation of how you got there, plus follow-ups", d: ["Nothing; the answer is enough", "A faster answer next time", "A formal proof with theorems"], why: "Getting the answer isn't enough; explaining the path is part of it." },
+    { q: "Why does order-of-magnitude checking matter?", a: "It tells you whether an answer is even reasonable", d: ["It replaces exact calculation", "Interviewers only want rough answers", "It's required for every question"], why: "Numeracy is valued for judging reasonableness, not just computing." },
+  ],
+};
+
+/* ---------- generators ---------- */
+const CAL_FACTS = [
+  ["Licensed yellow taxi medallions in New York City", 13587, "Fixed by law at 13,587."],
+  ["Height of Mount Everest, in meters", 8849, "8,849 m (2020 survey)."],
+  ["Year the Eiffel Tower was completed", 1889, "Completed for the 1889 World's Fair."],
+  ["Bones in the adult human body", 206, ""],
+  ["Member states of the United Nations", 193, ""],
+  ["Average Earth–Moon distance, in thousands of km", 384, "About 384,400 km."],
+  ["Speed of sound in air at 20°C, in meters per second", 343, ""],
+  ["Year the first iPhone went on sale", 2007, ""],
+  ["Keys on a standard piano", 88, ""],
+  ["Elements in the periodic table", 118, ""],
+  ["Diameter of the Earth, in km", 12742, ""],
+  ["Seats in the US House of Representatives", 435, ""],
+  ["Year Harvard was founded", 1636, ""],
+  ["Height of the Empire State Building with its antenna, in meters", 443, ""],
+  ["Year Amazon was founded", 1994, ""],
+  ["Length of the Nile, in km", 6650, "Usually cited as about 6,650 km."],
+  ["Year the Berlin Wall fell", 1989, ""],
+  ["Countries in Africa (UN members)", 54, ""],
+  ["Flight distance from New York to London, in km", 5570, "About 5,570 km."],
+  ["Year the New York Stock Exchange was founded", 1792, "The Buttonwood Agreement, 1792."],
+  ["US states that border Canada", 13, ""],
+  ["Weight of a US nickel, in grams", 5, ""],
+  ["Hours in a (non-leap) year", 8760, "365 × 24."],
+  ["Population of Australia, in millions", 27, "About 27 million (2024)."],
+];
+const GENS = {
+  random: [
+    () => { const [x, a, why] = pick(TYPE_POOL); return mcqQ("random", "type", `What type of random quantity is this? <b>${esc(x)}</b>`, a, ["Binary", "Discrete", "Continuous"].filter(o => o !== a), why); },
+    () => { const [x, a, why] = pick(KIND_POOL); return mcqQ("random", "kind", `What kind of uncertainty is this? <b>${esc(x)}</b>`, a, ["Objective randomness", "One-off future event", "Knowable unknown"].filter(o => o !== a), why); },
+    fromPool("random", POOLS.random),
+  ],
+  counting: [
+    () => { const e = pick(DIE_EVENTS), o = outs(e); return probQ("counting", "die", `Roll one d6. What is the probability the roll is ${e.name}?`, o.length, 6, [`Outcomes that work: ${setStr(o)}.`, `${o.length} of 6 equally likely outcomes.`], ["probCount"]); },
+    () => { const s = ri(2, 12), ways = PAIRS.filter(([a, b]) => a + b === s); return probQ("counting", "sum", `Roll two d6. What is the probability the sum is ${s}?`, ways.length, 36, ["36 equally likely ordered outcomes (red die, blue die).", `Pairs that sum to ${s}: ${ways.map(p => `(${p})`).join(" ")}.`, `${ways.length} of 36. Shortcut: 6 − |${s} − 7| = ${6 - Math.abs(s - 7)} ways.`], ["probCount", "diceSums"]); },
+    () => { const k = ri(4, 10), up = Math.random() < .5, ways = PAIRS.filter(([a, b]) => (up ? a + b >= k : a + b <= k)); return probQ("counting", "range", `Roll two d6. What is the probability the sum is ${up ? "at least" : "at most"} ${k}?`, ways.length, 36, [`Add the ways for each sum ${up ? `from ${k} to 12` : `from 2 to ${k}`} (ways for sum s = 6 − |s − 7|).`, `Total: ${ways.length} of 36.`], ["probCount", "diceSums"]); },
+    () => { const [what, n] = pick([["a face card (J, Q, K)", 12], ["a heart", 13], ["an ace", 4], ["a red card", 26], ["an ace or a king", 8], ["a red face card", 6], ["a number card from 2 to 10", 36], ["a black ace", 2]]); return probQ("counting", "cards", `Draw one card from a 52-card deck. Probability it's ${what}?`, n, 52, [`${n} cards qualify out of 52 equally likely.`], ["probCount"]); },
+    () => mcqQ("counting", "trap", "A friend says P[two d6 sum to 7] = 1/11, since there are 11 possible sums. What's wrong?", "The 11 sums aren't equally likely; count the 36 ordered outcomes", ["Nothing; 1/11 is right", "There are 12 possible sums, so it's 1/12", "The dice should be treated as identical, giving 21 outcomes"], "Counting works only for equally likely outcomes. Of 36 ordered outcomes, 6 sum to 7, so the answer is 1/6."),
+    () => { const a = ri(1, 5) * 10, b = ri(1, 9 - a / 10) * 10, c = 100 - a - b; return numQ("counting", "tickets", `A contract settles at 0 with ${a}%, 1 with ${b}% and 2 with ${c}%. Picture 10 equally likely tickets. How many tickets show 2?`, c / 10, [`${c}% of 10 tickets = ${c / 10}.`, `So the tickets are ${a / 10} zeros, ${b / 10} ones and ${c / 10} twos, each equally likely.`], ["probCount"], 0); },
+  ],
+  prob: [
+    () => { const [A, B] = shuffle(DIE_EVENTS).slice(0, 2), a = outs(A), b = outs(B), ab = a.filter(x => b.includes(x)), u = a.length + b.length - ab.length; return probQ("prob", "union", `Roll a d6. What is P[${A.name} or ${B.name}]?`, u, 6, [`P[${A.name}] = ${a.length}/6 ${setStr(a)}.`, `P[${B.name}] = ${b.length}/6 ${setStr(b)}.`, `P[both] = ${ab.length}/6 ${setStr(ab)}.`, `${a.length}/6 + ${b.length}/6 − ${ab.length}/6 = ${u}/6.`], ["union"]); },
+    () => { const [A, B, na, nb, nab] = pick([["a heart", "a face card", 13, 12, 3], ["a red card", "an ace", 26, 4, 2], ["a spade", "a king", 13, 4, 1], ["a club", "a number card from 2 to 10", 13, 36, 9], ["a face card", "a black card", 12, 26, 6]]); return probQ("prob", "cards", `Draw one card. What is P[${A} or ${B}]?`, na + nb - nab, 52, [`P[${A}] = ${na}/52, P[${B}] = ${nb}/52.`, `Both: ${nab}/52.`, `${na} + ${nb} − ${nab} = ${na + nb - nab} of 52.`], ["union"]); },
+    () => { const n = ri(2, 5), d = 6 ** n, none = 5 ** n; return probQ("prob", "atleast", `Roll a d6 ${n} times. What is the probability of at least one 6?`, d - none, d, [`Complement: no 6 in any roll = (5/6)^${n} = ${none}/${d}.`, `1 − ${none}/${d} = ${d - none}/${d}.`], ["complement", "indep"]); },
+    () => { const [what, n] = pick([["not a face card", 40], ["not a heart", 39], ["not an ace", 48], ["not a red card", 26]]); return probQ("prob", "complement", `Draw one card. What is the probability it's ${what}?`, n, 52, [`Complement: 1 − P[${what.replace("not ", "")}].`, `1 − ${52 - n}/52 = ${n}/52.`], ["complement"]); },
+    fromPool("prob", POOLS.prob),
+  ],
+  indep: [
+    () => { const [what, n] = pick([["face cards", 12], ["hearts", 13], ["aces", 4], ["red cards", 26]]); return probQ("indep", "with", `Draw two cards with replacement. Probability both are ${what}?`, n * n, 52 * 52, [`Replacing the card keeps draws independent.`, `${n}/52 × ${n}/52 = ${fracStr(n * n, 2704)}.`], ["indep"]); },
+    () => { const [what, n] = pick([["clubs", 13], ["aces", 4], ["hearts", 13], ["face cards", 12], ["red cards", 26]]); return probQ("indep", "without", `Draw two cards without replacement. Probability both are ${what}?`, n * (n - 1), 52 * 51, [`First: ${n}/52.`, `Given that, ${n - 1} of the remaining 51: ${n - 1}/51.`, `${n}/52 × ${n - 1}/51 = ${fracStr(n * (n - 1), 2652)}.`], ["withoutRepl"]); },
+    () => { const n = ri(2, 4); return probQ("indep", "odd", `Roll ${n} d6. What is the probability their product is odd?`, 1, 2 ** n, ["A product is odd only if every factor is odd.", `Each die is odd with probability 1/2, independently: (1/2)^${n} = 1/${2 ** n}.`], ["indep"]); },
+    () => { const n = ri(3, 6); return probQ("indep", "heads", `Flip ${n} fair coins. Probability they're all heads?`, 1, 2 ** n, [`Independent flips multiply: (1/2)^${n} = 1/${2 ** n}.`], ["indep"]); },
+    () => {
+      const [an, at] = pick([["the first die is even", a => a % 2 === 0], ["the first die is 6", a => a === 6], ["the first die is at most 2", a => a <= 2], ["the first die is prime", a => [2, 3, 5].includes(a)]]);
+      const [bn, bt] = pick([["the sum is 7", (a, b) => a + b === 7], ["the sum is at least 10", (a, b) => a + b >= 10], ["the roll is a double", (a, b) => a === b], ["the second die is odd", (a, b) => b % 2 === 1], ["the sum is even", (a, b) => (a + b) % 2 === 0], ["the sum is 6", (a, b) => a + b === 6]]);
+      const A = PAIRS.filter(([a]) => at(a)).length, B = PAIRS.filter(([a, b]) => bt(a, b)).length, AB = PAIRS.filter(([a, b]) => at(a) && bt(a, b)).length;
+      const ind = AB * 36 === A * B;
+      return mcqQ("indep", "check", `Roll two dice. Are these independent? <b>${an}</b> and <b>${bn}</b>`, ind ? "Yes, independent" : "No, dependent", [ind ? "No, dependent" : "Yes, independent"],
+        `P[A] = ${fracStr(A, 36)}, P[B] = ${fracStr(B, 36)}, so P[A] × P[B] = ${fracStr(A * B, 1296)}. P[A and B] = ${fracStr(AB, 36)}. ${ind ? "They match, so the events are independent." : "They differ, so learning one changes the odds of the other."}`);
+    },
+  ],
+  rv: [
+    () => { const k = ri(1, 6); return probQ("rv", "max", `Roll two d6. What is the probability the larger of the two is ${k}?`, 2 * k - 1, 36, [`P[max ≤ k] = (k/6)², so P[max = k] = (k² − (k−1)²)/36 = (2k − 1)/36.`, `k = ${k}: ${2 * k - 1}/36.`], ["maxDice"]); },
+    () => { const k = ri(1, 6); return probQ("rv", "min", `Roll two d6. What is the probability the smaller of the two is ${k}?`, 13 - 2 * k, 36, [`P[min ≥ k] = ((7 − k)/6)², so P[min = k] = ((7−k)² − (6−k)²)/36 = (13 − 2k)/36.`, `k = ${k}: ${13 - 2 * k}/36.`], ["distribution"]); },
+    () => { const d = ri(0, 5), n = d === 0 ? 6 : 2 * (6 - d); return probQ("rv", "diff", `Roll two d6. What is the probability the two dice differ by exactly ${d}?`, n, 36, [d === 0 ? "Differ by 0 means doubles: 6 pairs." : `Pairs with |B − R| = ${d}: ${6 - d} with blue higher and ${6 - d} with red higher.`, `${n} of 36.`], ["distribution"]); },
+    () => { const F = pick([50, 59, 68, 77, 86, 95]); return numQ("rv", "transform", `Tomorrow's temperature F has an expected value of ${F}°F. What is the expected value of C = (F − 32) × 5/9 in Celsius?`, (F - 32) * 5 / 9, [`For a linear transform, E[aX + b] = a × E[X] + b.`, `(${F} − 32) × 5/9 = ${dec((F - 32) * 5 / 9, 1)}.`], ["linearTransform"], .2); },
+    fromPool("rv", POOLS.rv),
+  ],
+  ev: [
+    () => { const N = pick([4, 8, 10, 12, 20]); return numQ("ev", "dN", `What is the expected value of a fair ${N}-sided die (faces 1 to ${N})?`, (N + 1) / 2, [`Uniform on 1–${N}: symmetric around the midpoint.`, `(1 + ${N}) ÷ 2 = ${(N + 1) / 2}.`], ["ev"]); },
+    () => { const k = ri(1, 6), [pn, pd] = pick([[1, 2], [1, 3], [1, 4]]), p = pn / pd, rest = 21 - k; const ev = k * p + rest * (1 - p) / 5; return numQ("ev", "reweight", `A die is weighted so ${k} comes up ${fracStr(pn, pd)} of the time; the other five faces are equally likely. Expected value?`, ev, [`Each other face gets (1 − ${fracStr(pn, pd)}) ÷ 5 = ${dec((1 - p) / 5, 4)}.`, `${k} × ${fracStr(pn, pd)} + (sum of other faces = ${rest}) × ${dec((1 - p) / 5, 4)} = ${dec(k * p, 3)} + ${dec(rest * (1 - p) / 5, 3)}.`], ["ev"], .02, dec(ev, 3)); },
+    () => { const k = ri(1, 6), m = pick([0, 10, 12, 20]); return numQ("ev", "replace", `The ${k} on a fair die is replaced by a ${m}. Expected value?`, (21 - k + m) / 6, [`New faces sum to 21 − ${k} + ${m} = ${21 - k + m}.`, `${21 - k + m} ÷ 6 = ${dec((21 - k + m) / 6)}.`], ["ev"]); },
+    () => { const n = ri(2, 6); return numQ("ev", "sum", `What is the expected sum of ${n} d6 rolls?`, 3.5 * n, [`Linearity: E[sum] = sum of E[each] = ${n} × 3.5.`], ["linearity"]); },
+    () => { const n = pick([6, 12, 18, 30, 60]); return numQ("ev", "indicator", `Roll a d6 ${n} times. What is the expected number of 6s?`, n / 6, [`Let 1ᵢ = 1 if roll i is a 6. E[1ᵢ] = P[6] = 1/6.`, `By linearity, ${n} × 1/6 = ${n / 6}.`], ["indicator", "linearity"]); },
+    () => { const x = pick([10, 20, 50, 100]), y = pick([5, 10, 20, 40]), [pn, pd] = pick([[1, 2], [1, 3], [2, 5], [1, 4], [3, 5]]), p = pn / pd; return numQ("ev", "bet", `A bet pays $${x} if you win and loses $${y} if you don't. You win with probability ${fracStr(pn, pd)}. Expected payout?`, x * p - y * (1 - p), [`Payout = y + (x − y) × 1_win with x = ${x}, y = −${y}.`, `E = −${y} + (${x} + ${y}) × ${fracStr(pn, pd)} = ${dec(x * p - y * (1 - p), 2)}.`], ["betEV", "indicator"], .05, "$" + dec(x * p - y * (1 - p), 2)); },
+    () => (Math.random() < .5 ? numQ("ev", "product", "Roll two independent d6. What is the expected value of their product?", 12.25, ["Independent, so E[X × Y] = E[X] × E[Y].", "3.5 × 3.5 = 12.25."], ["ev"]) : numQ("ev", "square", "Roll one d6. What is the expected value of the square of the roll?", 91 / 6, ["X × X is not a product of independent variables, so compute directly.", "(1 + 4 + 9 + 16 + 25 + 36) ÷ 6 = 91/6 ≈ 15.17 (not 3.5² = 12.25)."], ["ev"], .02, "91/6 ≈ 15.17")),
+    fromPool("ev", POOLS.ev),
+  ],
+  ci: [
+    () => { const [what, ans, note] = pick(CAL_FACTS); return { skill: "quant", type: "ci", c: "ci", f: "cal", title: what, answer: ans, note, context: QCON.ci.name }; },
+    () => { const N = pick([100, 50, 20, 200]), x = pick([50, 80, 90, 95]); return numQ("ci", "uniform", `A number is uniform from 0 to ${N}. How wide is the narrowest ${x}% confidence interval?`, N * x / 100, [`For a uniform distribution every interval of the same width holds the same share.`, `${x}% of ${N} = ${N * x / 100}.`], ["ciDef"], .01); },
+    () => (Math.random() < .5 ? numQ("ci", "absdev", "What is the average absolute deviation of a fair d6 from its mean (E|X − 3.5|)?", 1.5, ["Deviations for 1–6: 2.5, 1.5, 0.5, 0.5, 1.5, 2.5.", "Average: 9 ÷ 6 = 1.5."], ["deviation"]) : numQ("ci", "variance", "What is the variance of a fair d6, E[(X − 3.5)²]?", 35 / 12, ["Squared deviations: 6.25, 2.25, 0.25, 0.25, 2.25, 6.25.", "Average: 17.5 ÷ 6 = 35/12 ≈ 2.92."], ["deviation"], .02, "35/12 ≈ 2.92")),
+    fromPool("ci", POOLS.ci),
+  ],
+  cond: [
+    () => { const B = pick(DIE_EVENTS), b = outs(B), s = b.reduce((x, y) => x + y, 0); return numQ("cond", "ev", `Roll a d6. What is its expected value, given that the roll is ${B.name}?`, s / b.length, [`Given ${B.name}, only ${setStr(b)} remain, still equally likely.`, `(${b.join(" + ")}) ÷ ${b.length} = ${fracStr(s, b.length)}.`], ["condProb", "ev"], .02, probShown(s, b.length)); },
+    () => { let A, B, ab, b; do { [A, B] = shuffle(DIE_EVENTS).slice(0, 2); b = outs(B); ab = b.filter(A.t); } while (!b.length); return probQ("cond", "die", `Roll a d6. What is P[${A.name} | ${B.name}]?`, ab.length, b.length, [`Given ${B.name}: ${setStr(b)}, each equally likely.`, `Of those, ${A.name}: ${setStr(ab)}.`, `${ab.length} of ${b.length}.`], ["condProb"]); },
+    () => { const n = ri(3, 4), k = ri(1, n - 1); const top = choose(n, k), bot = 2 ** n - 1; return probQ("cond", "coins", `Flip ${n} coins. What is P[exactly ${k} head${k > 1 ? "s" : ""} | at least one tail]?`, top, bot, [`${2 ** n} outcomes. At least one tail: all except all-heads = ${bot}.`, `Exactly ${k} head${k > 1 ? "s" : ""} (which already includes a tail): C(${n},${k}) = ${top}.`, `${top} ÷ ${bot}.`], ["condProb"]); },
+    () => (Math.random() < .5 ? probQ("cond", "sixes", "Roll two d6. Given at least one is a 6, what is the probability both are 6?", 1, 11, ["At least one 6: 36 − 25 = 11 outcomes.", "Both 6: just (6,6).", "1 of 11."], ["condProb"]) : (() => { const s = pick([2, 4, 6, 8, 10, 12]); return probQ("cond", "doubles", `Roll two d6. Given the roll is a double, what is the probability the sum is ${s}?`, 1, 6, ["Doubles: (1,1) … (6,6), 6 equally likely outcomes.", `Exactly one, (${s / 2},${s / 2}), sums to ${s}.`], ["condProb"]); })()),
+    () => { const a = ri(1, 6), t = ri(a + 2, a + 6); const n = DIE.filter(b => a + b >= t).length; return probQ("cond", "first", `Roll two d6. Given the first die is ${a}, what is the probability the sum is at least ${t}?`, n, 6, [`The second die must be at least ${t - a}.`, `${n} of 6 values work.`], ["condProb"]); },
+    () => { const p = pick([.01, .05, .1, .2]), sens = pick([.9, .95, .8]), fp = pick([.05, .1, .2]); const num = p * sens, den = num + (1 - p) * fp; return probQ("cond", "bayes", `${p * 100}% of trades are "informed." Your alert flags ${sens * 100}% of informed trades and ${fp * 100}% of the rest. A trade is flagged. Probability it's informed?`, num, den, [`P[flag and informed] = ${p} × ${sens} = ${dec(num, 4)}.`, `P[flag] = ${dec(num, 4)} + ${dec(1 - p, 2)} × ${fp} = ${dec(den, 4)}.`, `${dec(num, 4)} ÷ ${dec(den, 4)} = ${dec(num / den)}.`], ["bayes", "condProb"]); },
+  ],
+  markets: [
+    () => { const b = ri(2, 9), n = pick([10, 20, 50]); return mcqQ("markets", "bid", `You say "${b} bid for ${n}." What have you offered to do?`, `Buy ${n} at $${b} each`, [`Sell ${n} at $${b} each`, `Buy ${b} at $${n} each`, `Buy and sell ${n} at $${b}`], `"Bid" means buy. "${b} bid for ${n}" is an order to buy ${n} at $${b}.`); },
+    () => { const a = ri(3, 9), n = pick([10, 20, 50]); return mcqQ("markets", "offer", `You say "${n} at ${a}." What have you offered to do?`, `Sell ${n} at $${a} each`, [`Buy ${n} at $${a} each`, `Sell ${a} at $${n} each`, `Buy ${a} at $${n} each`], `"${n} at ${a}" is an offer: you'll sell ${n} at $${a}.`); },
+    () => { const b = ri(2, 8), a = b + pick([1, 2]), n = pick([5, 10, 20]); return mcqQ("markets", "sold", `Your market is "${b} at ${a}, ${n} up." A trader says "sold." What happened?`, `You bought ${n} at $${b}`, [`You sold ${n} at $${a}`, `You bought ${n} at $${a}`, `You sold ${n} at $${b}`], `"Sold" hits your bid: they sell to you, so you buy ${n} at your bid of $${b}.`); },
+    () => { const b = ri(2, 8), a = b + pick([1, 2]), n = pick([5, 10, 20]); return mcqQ("markets", "take", `Your market is "${b} at ${a}, ${n} up." A trader says "take 'em." What happened?`, `You sold ${n} at $${a}`, [`You bought ${n} at $${b}`, `You bought ${n} at $${a}`, `You sold ${n} at $${b}`], `"Take 'em" lifts your offer: they buy from you, so you sell ${n} at your offer of $${a}.`); },
+    () => { const b = ri(2, 8), a = b + pick([1, 2]), n = 10, m = ri(2, 8); return mcqQ("markets", "partial", `Your market is "${b} at ${a}, ${n} up." A trader says "I buy ${m}." What's left?`, `You sold ${m} at $${a}; your offer for ${n - m} more stays live`, [`You sold ${n} at $${a}; nothing is left`, `You bought ${m} at $${b}; ${n - m} remain on your bid`, `Your whole market is cancelled`], `A partial fill: they bought ${m} from your offer. The remaining ${n - m} stay active unless you say you're out.`); },
+    () => { const b = ri(2, 4), s = ri(1, 6), n = pick([5, 10, 20]), buy = Math.random() < .5; const pnl = buy ? n * (s - b) : n * (b + 1 - s); return numQ("markets", "pnl", buy ? `You bought ${n} contracts at $${b}. Each pays $1 per pip of a d6, which rolls ${s}. Your P&L?` : `You sold ${n} contracts at $${b + 1}. Each pays $1 per pip of a d6, which rolls ${s}. Your P&L?`, pnl, [buy ? `Bought: P&L = size × (settlement − price) = ${n} × (${s} − ${b}).` : `Sold: P&L = size × (price − settlement) = ${n} × (${b + 1} − ${s}).`, `= ${pnl < 0 ? "−" : ""}$${Math.abs(pnl)}.`], ["pnl"], .01, (pnl < 0 ? "−$" : "$") + Math.abs(pnl)); },
+    () => { const c = pick(CONTRACTS.filter(x => !x.big)), off = Math.random() < .5, price = +(c.ev + (Math.random() < .5 ? -1 : 1) * pick([.3, .5, .8]) * c.w).toFixed(2); const good = off ? price < c.ev : price > c.ev; return mcqQ("markets", "decide", `A trader ${off ? "offers" : "bids"} ${c.name} at $${price}. Should you trade?`, good ? `Yes: ${off ? "buy" : "sell"}, the price is on the right side of the EV (${dec(c.ev, 2)})` : `No: the price is on the wrong side of the EV (${dec(c.ev, 2)})`, [good ? `No: the price is on the wrong side of the EV (${dec(c.ev, 2)})` : `Yes: ${off ? "buy" : "sell"}, the price is on the right side of the EV (${dec(c.ev, 2)})`, "Only if you can trade more than 10", "No: never trade with someone who quoted first"], `${c.how} ${off ? `Buying at ${price} vs EV ${dec(c.ev, 2)}` : `Selling at ${price} vs EV ${dec(c.ev, 2)}`} ${good ? "has positive expected value." : "loses on average."}${formulaHTML(["edge"])}`); },
+    () => marketQ("markets", pick(CONTRACTS)),
+    fromPool("markets", POOLS.markets),
+  ],
+  adverse: [
+    () => { const N = pick([10, 20, 100]), a = ri(Math.ceil(N * .4), Math.floor(N * .8)); const e = (a + 1 + N) / 2; return numQ("adverse", "offer", `A card numbered 1–${N} (uniform) is drawn. Your counterparty sees it and buys from your offer of ${a} only when the card is worth more. If they buy, what is your expected profit per contract?`, a - e, [`They buy only when the card is ${a + 1} to ${N}.`, `E[card | card > ${a}] = (${a + 1} + ${N}) ÷ 2 = ${dec(e, 2)}.`, `You sold at ${a}: ${a} − ${dec(e, 2)} = ${dec(a - e, 2)} per contract.`], ["condFill"], .05); },
+    () => { const N = pick([10, 20, 100]), b = ri(Math.ceil(N * .3), Math.floor(N * .7)); const e = b / 2; return numQ("adverse", "bid", `A card numbered 1–${N} (uniform) is drawn. Your counterparty sees it and sells to your bid of ${b} only when the card is worth less. If they sell, what is your expected profit per contract?`, e - b, [`They sell only when the card is 1 to ${b - 1}.`, `E[card | card < ${b}] = (1 + ${b - 1}) ÷ 2 = ${dec(e, 2)}.`, `You bought at ${b}: ${dec(e, 2)} − ${b} = ${dec(e - b, 2)} per contract.`], ["condFill"], .05); },
+    () => marketQ("adverse", pick(CONTRACTS.filter(x => !x.big)), true),
+    fromPool("adverse", POOLS.adverse),
+  ],
+  tools: [
+    () => { const [what, n] = pick([["a 6 on a d6", 6], ["heads on a fair coin", 2], ["an ace, drawing with replacement", 13], ["a sum of 12 on two dice", 36], ["doubles on two dice", 6], ["a 1 or 2 on a d6", 3], ["a heart, drawing with replacement", 4]]); return numQ("tools", "geometric", `You repeat until you get ${what}. Expected number of tries?`, n, [`P[success] = 1/${n} each try, independently (memoryless).`, `E = 1 + (1 − p) × E gives E = 1/p = ${n}.`], ["geometric", "recursion"], .01); },
+    () => { const n = ri(2, 4); const e = 2 ** (n + 1) - 2; return numQ("tools", "runs", `Expected number of coin flips to see ${n} heads in a row?`, e, ["E₁ = 2.", "Eₙ = 2Eₙ₋₁ + 2: reach n−1 in a row, flip once more; half the time you start over.", `So E = ${Array.from({ length: n }, (_, i) => 2 ** (i + 2) - 2).join(" → ")}.`], ["headRuns", "recursion"], .01); },
+    () => numQ("tools", "sixes", "Expected number of d6 rolls to see two 6s in a row?", 42, ["E₁ = 6 (geometric).", "E₂ = E₁ + 1 + (5/6) × E₂: after one 6, roll again; 5/6 of the time you start over.", "(1/6) × E₂ = 7, so E₂ = 42."], ["recursion"], .01),
+    () => numQ("tools", "series", "Evaluate ½ × 1 + ¼ × 2 + ⅛ × 3 + … (the expected flips until heads).", 2, ["This is E[flips until heads].", "Recursion: E = 1 + ½ × E, so E = 2."], ["recursion"], .01),
+    () => mcqQ("tools", "edge", "You claim P[at least one 6 in n rolls] = n/6. Which check proves it wrong?", "n = 7 gives 7/6, more than 1", ["n = 1 gives 1/6", "n = 0 gives 0", "n = 6 gives 1"], "Probabilities can't exceed 1, so the large-n edge case breaks it. The right answer is 1 − (5/6)ⁿ."),
+    fromPool("tools", POOLS.tools),
+  ],
+  interview: [fromPool("interview", POOLS.interview)],
+};
+function quantDrill(c, n = 8) {
+  const gens = GENS[c], out = [], seen = new Set();
+  let order = [];
+  for (let tries = 0; out.length < n && tries < 300; tries++) {
+    if (!order.length) order = shuffle(gens.map((_, i) => i));
+    const q = gens[order.pop()]();
+    if (seen.has(q.title)) continue;
+    seen.add(q.title); out.push(q);
+  }
+  return out;
+}
+
+/* ---------- quant formulas and trading terms for the glossary ---------- */
+Object.assign(FORMULAS, {
+  probCount: { term: "Probability by counting", group: "Probability", formula: "P[event] = favorable outcomes ÷ total outcomes", note: "Only when every outcome is equally likely.", ex: "P[prime on a d6] = 3/6" },
+  diceSums: { term: "Two-dice sums", group: "Probability", formula: "Ways to roll sum s = 6 − |s − 7|, out of 36", note: "7 has 6 ways; 2 and 12 have 1 each.", ex: "Sum 10: 6 − 3 = 3 ways → 3/36" },
+  union: { term: "Union (or)", group: "Probability", formula: "P[A or B] = P[A] + P[B] − P[A and B]", note: "Subtract the overlap so it isn't counted twice.", ex: "Even or prime on a d6: 3/6 + 3/6 − 1/6 = 5/6" },
+  complement: { term: "Complement (not)", group: "Probability", formula: "P[not A] = 1 − P[A]", note: "The fastest route to 'at least one' questions.", ex: "At least one 6 in 4 rolls: 1 − (5/6)⁴ ≈ 0.518" },
+  indep: { term: "Independent events", group: "Probability", formula: "P[A and B] = P[A] × P[B]", note: "Only when knowing one tells you nothing about the other.", ex: "Two heads: ½ × ½ = ¼" },
+  withoutRepl: { term: "Drawing without replacement", group: "Probability", formula: "P[A then B] = P[A] × P[B | A]", note: "The second draw comes from a smaller deck.", ex: "Two clubs: 13/52 × 12/51 = 1/17" },
+  distribution: { term: "Distribution", group: "Probability", formula: "Every value x with its P[X = x]; the P's sum to 1", note: "Uniform means every value is equally likely.", ex: "Min of two dice: P[min = k] = (13 − 2k)/36" },
+  maxDice: { term: "Maximum of dice", group: "Probability", formula: "P[max ≤ k] = (k/6)ⁿ, so P[max = k] = (kⁿ − (k−1)ⁿ)/6ⁿ", note: "Work with 'at most' first, then take differences.", ex: "Two dice: P[max = 6] = 11/36" },
+  linearTransform: { term: "Linear transform", group: "Probability", formula: "E[aX + b] = a × E[X] + b", note: "Converting units moves the average the same way.", ex: "E[F] = 68°F → E[C] = (68 − 32) × 5/9 = 20°C" },
+  ev: { term: "Expected value", group: "Probability", formula: "E[X] = Σ x × P[X = x]", note: "The single most important number about a distribution.", ex: "d6: (1 + … + 6) ÷ 6 = 3.5" },
+  linearity: { term: "Linearity of expectation", group: "Probability", formula: "E[X + Y] = E[X] + E[Y]", note: "True even when X and Y are dependent. For independent X, Y: E[XY] = E[X]E[Y].", ex: "Sum of 3 dice: 3 × 3.5 = 10.5" },
+  indicator: { term: "Indicator variable", group: "Probability", formula: "1_A = 1 if A happens, else 0; E[1_A] = P[A]", note: "Turns counting problems into sums of probabilities.", ex: "Expected 6s in 12 rolls: 12 × 1/6 = 2" },
+  betEV: { term: "Expected payout of a bet", group: "Probability", formula: "E = y + (x − y) × P[win]  (win x, lose → y)", note: "Same as P[win] × x + P[lose] × y.", ex: "Win $20 w.p. 1/4, lose $10: −10 + 30 × ¼ = −$2.50" },
+  ciDef: { term: "Confidence interval", group: "Probability", formula: "A range that contains the outcome with a stated probability", note: "Many intervals qualify; often you want the narrowest. Track your hit rate: 90% intervals should miss 1 in 10.", ex: "Uniform 0–100: [5, 95] is a 90% interval" },
+  deviation: { term: "Spread: deviation and variance", group: "Probability", formula: "Avg abs deviation = E|X − E[X]| · Variance = E[(X − E[X])²]", note: "Two ways to measure how far outcomes typically land from the average.", ex: "d6: 1.5 and 35/12 ≈ 2.92" },
+  condProb: { term: "Conditional probability", group: "Probability", formula: "P[A | B] = P[A and B] ÷ P[B]", note: "Shrink to the outcomes where B is true, then ask how many have A.", ex: "P[5 | roll ≥ 4] = (1/6) ÷ (1/2) = 1/3" },
+  bayes: { term: "Bayes' rule", group: "Probability", formula: "P[A | B] = P[B | A] × P[A] ÷ P[B]", note: "Turns 'how likely is the evidence given A' into 'how likely is A given the evidence'.", ex: "Prior 10%, hit 90%, false alarm 20%: 0.09 ÷ 0.27 = 1/3" },
+  geometric: { term: "Expected tries to first success", group: "Probability", formula: "E = 1 ÷ p", note: "From the recursion E = 1 + (1 − p)E.", ex: "Roll until a 6: 6 tries" },
+  headRuns: { term: "Heads in a row", group: "Probability", formula: "Expected flips for n heads in a row = 2^(n+1) − 2", note: "Eₙ = 2Eₙ₋₁ + 2, starting from E₁ = 2.", ex: "3 in a row: 14 flips" },
+  recursion: { term: "Recursion for expectations", group: "Probability", formula: "E = cost of one step + Σ P[next state] × E[from that state]", note: "Works when the process is memoryless: after a failure you're back where you started.", ex: "Flip until heads: E = 1 + ½E → 2" },
+  edge: { term: "Edge on a trade", group: "Trading", formula: "Bought: E[value] − price · Sold: price − E[value]", note: "Positive edge means you expect to profit on average.", ex: "Buy a d6 contract at 3: edge = 3.5 − 3 = 0.5" },
+  pnl: { term: "P&L at settlement", group: "Trading", formula: "Bought: size × (settlement − price) · Sold: size × (price − settlement)", note: "Realized P&L is noisy; edge is what you earn on average.", ex: "Bought 10 at 3, settles 5: +$20" },
+  condFill: { term: "Value given a fill", group: "Trading", formula: "Lifted at offer a: E[X | X > a] · Hit at bid b: E[X | X < b]", note: "Against an informed trader, assume they only trade when it's good for them.", ex: "Card 1–10, offer 6: E[X | X > 6] = 8.5" },
+});
+const QTERMS = [
+  ["Bid", "An order to buy. \"2 bid for 10\" = buy 10 at $2."],
+  ["Offer", "An order to sell. \"10 at 4\" = sell 10 at $4."],
+  ["Two-sided market", "\"2 at 4, 10 up\" = bid $2 and offer $4, for 10 each way."],
+  ["Size", "The quantity of shares or contracts in an order."],
+  ["Hit", "Sell to someone's bid, by saying \"sold.\""],
+  ["Lift", "Buy from someone's offer, by saying \"take 'em.\""],
+  ["Fill", "A trade against your order. Partially filled orders keep the remainder live."],
+  ["Out", "\"I'm out\" cancels your orders."],
+  ["Adverse selection", "The trades you get are worse than they look because the other side chooses to trade with you."],
+  ["Prior", "Your belief before new information arrives; you update it as you learn."],
+  ["Memoryless", "A process whose future doesn't depend on its past, like repeated coin flips."],
+  ["Law of large numbers", "Over many independent trials, the average result approaches the expected value."],
+  ["Overconfidence", "Giving intervals that are too narrow: your 90% ranges hit less than 90% of the time."],
+];
 
 /* ============================================================
    Session building
@@ -1484,7 +2030,7 @@ function skillStats() {
   return out;
 }
 function weakest(stats) {
-  const ks = Object.keys(SKILLS);
+  const ks = Object.keys(SKILLS).filter(k => k !== "quant");   // the quant course stays opt-in
   const untried = ks.filter(k => stats[k].n === 0);
   if (untried.length) return untried[0];
   return ks.slice().sort((a, b) => stats[a].mastery - stats[b].mastery)[0];
@@ -1506,6 +2052,15 @@ function itemsFor(skill, n) {
 
 function buildQueue(mode) {
   if (mode === "metric") return [...metricRound(), ...metricRound(), ...metricRound()];
+  if (mode.startsWith("q:")) return quantDrill(mode.slice(2));
+  if (mode === "qmix") {
+    const qs = quantStats(), pool = QORDER.filter(k => k !== "interview" && qs.con[k].status !== "new");
+    const ks = pool.length >= 2 ? pool : QORDER.slice(0, 4);
+    const out = [], seen = new Set();
+    for (let t = 0; out.length < 10 && t < 200; t++) { const k = pick(ks), g = pick(GENS[k])(); if (!seen.has(g.title)) { seen.add(g.title); out.push(g); } }
+    return out;
+  }
+  if (mode === "qmm") return [...shuffle(CONTRACTS).slice(0, 5).map(c => marketQ("markets", c)), marketQ("adverse", pick(CONTRACTS.filter(x => !x.big)), true)];
   if (mode === "sniper") return [0, 1, 2].flatMap(() => sniperItems(draw("prompt", PROMPTS)));
   if (mode === "bucket") return Array.from({ length: 8 }, () => bucketItem(draw("bucket", BUCKETS)));
   if (mode === "problem") return Array.from({ length: 4 }, problemItem);
@@ -1709,6 +2264,11 @@ function renderHome() {
       <div class="mode-math">${gymCard()}${modeCard("problem")}</div>
     </section>
 
+    <section class="wrap" style="gap:12px">
+      <div class="section-head"><h2>Trading Floor</h2><span class="muted" style="font-size:.85rem">Probability and markets, for quant and trading interviews</span></div>
+      <div class="modes">${floorCard()}</div>
+    </section>
+
     <section class="card wrap" style="gap:12px">
       <div class="section-head"><h2>Progress to mastery</h2><span class="muted" style="font-size:.82rem">Last 40 items per skill · mastery = 70% accuracy + 30% speed vs target · needs 20 items</span></div>
       <div class="ptable-wrap"><table class="ptable">
@@ -1743,6 +2303,7 @@ function renderHome() {
 
   $("#view").querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => startSession(b.dataset.mode)));
   $("#view").querySelector("[data-gym]").addEventListener("click", renderGym);
+  $("#view").querySelector("[data-floor]").addEventListener("click", renderFloor);
   $("#backupBtn").addEventListener("click", () => {
     const box = $("#backupBox"); box.hidden = !box.hidden;
     $("#backupText").value = JSON.stringify(Store.recs);
@@ -1906,6 +2467,220 @@ function renderGym() {
 }
 
 /* ============================================================
+   Rendering: Trading Floor + lessons
+   ============================================================ */
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\*(.+?)\*/g, "<i>$1</i>");
+function lessonRead(k) { try { return localStorage.getItem("caseCracker.lesson." + k) === "1"; } catch (e) { return false; } }
+function markLesson(k) { try { localStorage.setItem("caseCracker.lesson." + k, "1"); } catch (e) {} }
+function quantStats() {
+  const out = {};
+  for (const k of QORDER) out[k] = { items: [] };
+  const cal = [];
+  for (const r of Store.recs) for (const it of r.items) {
+    if (it.s !== "quant" || !out[it.c]) continue;
+    out[it.c].items.push(it);
+    if (it.f === "cal") cal.push(it);
+  }
+  for (const k of QORDER) {
+    const o = out[k], rec = o.items.slice(-20);
+    o.n = o.items.length;
+    o.acc = rec.length ? rec.reduce((a, b) => a + b.ok, 0) / rec.length : null;
+    o.status = o.n >= 10 && o.acc >= .85 ? "mast" : o.n ? "prog" : lessonRead(k) ? "read" : "new";
+  }
+  const hits = cal.filter(i => i.hit).length;
+  return { con: out, cal: { n: cal.length, hits } };
+}
+const QSTATUS = { new: ["new", "Not started"], read: ["new", "Lesson read"], prog: ["prog", "Practicing"], mast: ["mast", "Mastered"] };
+
+function floorCard() {
+  const qs = quantStats(), mast = QORDER.filter(k => qs.con[k].status === "mast").length;
+  const nextK = QORDER.find(k => qs.con[k].status !== "mast");
+  return `<button class="mode" type="button" data-floor>
+    <span class="row"><h3>Trading Floor</h3><span class="tag">Quant</span></span>
+    <p>Probability &amp; Markets: 12 lessons with drills, from counting and expected value to making markets and adverse selection.</p>
+    <span class="meta"><span><b class="num">${mast}</b>/12 mastered</span><span>${nextK ? "Next: " + esc(QCON[nextK].name) : "Every lesson mastered"}</span></span>
+  </button>`;
+}
+
+function quantReview(s) {
+  const by = {};
+  s.items.forEach(i => (by[i.c] = by[i.c] || []).push(i));
+  return `<div class="review">${QORDER.filter(k => by[k]).map(k => { const a = by[k], ac = a.reduce((x, y) => x + y.ok, 0) / a.length; return `<div><span class="pill ${ac >= .85 ? "mast" : ac >= .6 ? "prog" : "work"}">${pct(ac)}</span><span><b>${esc(QCON[k].name)}</b> · ${a.length} question${a.length > 1 ? "s" : ""}</span></div>`; }).join("")}</div>`;
+}
+function renderFloor() {
+  S = null; clearInterval(timerId); screen = "floor";
+  const qs = quantStats(), mast = QORDER.filter(k => qs.con[k].status === "mast").length;
+  const nextK = QORDER.find(k => qs.con[k].status !== "mast");
+  const calPct = qs.cal.n ? qs.cal.hits / qs.cal.n : null;
+  const row = (k, i) => {
+    const o = qs.con[k], [cls, lab] = QSTATUS[o.status];
+    return `<div class="lrow">
+      <span class="lnum num">${String(i + 1).padStart(2, "0")}</span>
+      <div class="lmain"><b>${esc(QCON[k].name)}</b><span class="muted small">${esc(QCON[k].blurb)}</span></div>
+      <span class="pill ${cls}">${lab}</span>
+      <span class="num small lacc">${o.acc == null ? "—" : pct(o.acc) + " · " + o.n}</span>
+      <span class="lacts"><button class="btn sm" type="button" data-lesson="${k}">Lesson</button><button class="btn sm primary" type="button" data-qdrill="${k}">Drill</button></span>
+    </div>`;
+  };
+  $("#view").innerHTML = `
+  <div class="wrap" style="gap:22px">
+    <div class="gamebar"><div class="left"><button class="btn ghost" type="button" id="floorBack">← Dashboard</button><h2>Trading Floor</h2></div>
+      <span class="chip"><b class="num">${mast}</b>&nbsp;/ 12 mastered</span></div>
+    <section class="hero">
+      <div class="card shift">
+        <span class="eyebrow">${nextK ? `Up next · lesson ${QORDER.indexOf(nextK) + 1} of 12` : "Course complete"}</span>
+        ${nextK ? `<h2>${esc(QCON[nextK].name)}</h2><p>${esc(QCON[nextK].blurb)} Read the lesson (about 3 minutes), then drill 8 questions.</p>
+        <span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto"><button class="btn primary" type="button" data-lesson="${nextK}">Start lesson</button>${qs.con[nextK].status !== "new" ? `<button class="btn" type="button" data-qdrill="${nextK}" style="background:transparent;color:inherit;border-color:currentColor">Drill</button>` : ""}</span>`
+        : `<h2>Every concept mastered</h2><p>Keep it warm with mixed drills and market making.</p>`}
+      </div>
+      <div class="card wrap" style="gap:10px">
+        <span class="eyebrow">Calibration</span>
+        ${calPct == null ? `<p class="muted">Your 90% confidence intervals will be scored here. Well calibrated means about 9 in 10 contain the answer.</p>`
+        : `<div class="stat"><b>${pct(calPct)}</b><span>of your ${qs.cal.n} 90% intervals contained the answer (target 90%)</span></div>
+           <p class="small ${calPct < .8 ? "neg" : "muted"}">${calPct < .8 ? "Overconfident: widen your intervals." : calPct > .97 && qs.cal.n >= 10 ? "Possibly too wide: you can tighten a little." : "Well calibrated so far."}</p>`}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto">
+          <button class="btn" type="button" data-qmode="qmix">Mixed drill · 10</button>
+          <button class="btn" type="button" data-qmode="qmm">Market making · 6</button>
+        </div>
+      </div>
+    </section>
+    <section class="card wrap" style="gap:4px">
+      <div class="section-head" style="margin-bottom:8px"><h2>Course</h2><span class="muted small">In the order of the Probability &amp; Markets primer · mastered = 85%+ over your last 20, with at least 10 answered</span></div>
+      ${QORDER.map(row).join("")}
+    </section>
+  </div>`;
+  const v = $("#view");
+  $("#floorBack").addEventListener("click", renderHome);
+  v.querySelectorAll("[data-lesson]").forEach(b => b.addEventListener("click", () => renderLesson(b.dataset.lesson)));
+  v.querySelectorAll("[data-qdrill]").forEach(b => b.addEventListener("click", () => startSession("q:" + b.dataset.qdrill)));
+  v.querySelectorAll("[data-qmode]").forEach(b => b.addEventListener("click", () => startSession(b.dataset.qmode)));
+  scrollTo(0, 0);
+}
+
+function renderLesson(k) {
+  S = null; clearInterval(timerId); screen = "lesson";
+  const C = QCON[k], L = C.lesson, i = QORDER.indexOf(k), nextK = QORDER[i + 1];
+  markLesson(k);
+  $("#view").innerHTML = `
+  <div class="wrap" style="gap:14px">
+    <div class="gamebar"><div class="left"><button class="btn ghost" type="button" id="lessonBack">← Trading Floor</button><h2>${esc(C.name)}</h2></div><span class="chip">Lesson ${i + 1} of 12</span></div>
+    <article class="card stage lesson">
+      <span class="eyebrow">The idea</span>
+      ${L.idea.map(p => `<p>${md(p)}</p>`).join("")}
+      ${L.formulas.length ? formulaHTML(L.formulas) : ""}
+      <span class="eyebrow">Worked examples</span>
+      ${L.examples.map(ex => `<div class="worked"><div class="wq">${esc(ex.q)}</div><ol>${ex.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol><div class="wa">Answer: <b>${esc(ex.a)}</b></div></div>`).join("")}
+      <span class="eyebrow">Common traps</span>
+      <ul class="stratlist">${L.traps.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+      <div class="nextrow" style="flex-wrap:wrap">
+        ${nextK ? `<button class="btn" type="button" id="lessonNext">Next lesson: ${esc(QCON[nextK].name)}</button>` : ""}
+        <button class="btn primary" type="button" id="lessonDrill">Drill this · 8 questions</button>
+      </div>
+    </article>
+  </div>`;
+  $("#lessonBack").addEventListener("click", renderFloor);
+  $("#lessonDrill").addEventListener("click", () => startSession("q:" + k));
+  if (nextK) $("#lessonNext").addEventListener("click", () => renderLesson(nextK));
+  $("#lessonDrill").focus({ preventScroll: true });
+  scrollTo(0, 0);
+}
+
+/* ---------- market and confidence-interval questions ---------- */
+function renderMarketQ(q, st) {
+  const big = q.contract.big;
+  st.innerHTML = `${contextBlock(q)}
+    <div class="qtitle">${esc(q.title)}</div>
+    <p class="muted">Quote a two-sided market for ${q.size} contracts: your bid (where you'd buy) and your offer (where you'd sell).${q.informed ? " Careful: this counterparty sees the outcome before deciding." : ""}${big ? " Amounts in dollars; k / m work." : ""}</p>
+    <form class="pairform" id="pairForm" autocomplete="off">
+      <label>Bid<input id="lowIn" inputmode="decimal" placeholder="${big ? "e.g. 3m" : "e.g. 3"}"></label>
+      <span class="pair-at">at</span>
+      <label>Offer<input id="highIn" inputmode="decimal" placeholder="${big ? "e.g. 4m" : "e.g. 4"}"></label>
+      <span class="muted pair-size">${q.size} up</span>
+      <button class="btn primary" type="submit">Quote</button>
+    </form>
+    <div id="fbslot"></div>`;
+  $("#lowIn").focus();
+  $("#pairForm").addEventListener("submit", e => { e.preventDefault(); answerMarket(); });
+}
+function renderCIQ(q, st) {
+  st.innerHTML = `${contextBlock(q)}
+    <span class="eyebrow">Give a 90% confidence interval</span>
+    <div class="qtitle">${esc(q.title)}</div>
+    <p class="muted">Pick a range you're 90% sure contains the true value. Aim to miss about 1 time in 10, no more and no less.</p>
+    <form class="pairform" id="pairForm" autocomplete="off">
+      <label>Low<input id="lowIn" inputmode="decimal"></label>
+      <span class="pair-at">to</span>
+      <label>High<input id="highIn" inputmode="decimal"></label>
+      <button class="btn primary" type="submit">Lock in</button>
+    </form>
+    <div id="fbslot"></div>`;
+  $("#lowIn").focus();
+  $("#pairForm").addEventListener("submit", e => { e.preventDefault(); answerCI(); });
+}
+function readPair() {
+  const lo = parseNum($("#lowIn").value), hi = parseNum($("#highIn").value);
+  if (isNaN(lo) || isNaN(hi)) return { err: "Enter a number in both boxes." };
+  if (lo >= hi) return { err: "The first number must be lower than the second." };
+  return { lo, hi };
+}
+function pairError(msg) { $("#fbslot").innerHTML = `<p class="hint" style="color:var(--bad)">${esc(msg)}</p>`; }
+function answerMarket() {
+  if (S.answered) return;
+  const q = current(), c = q.contract, p = readPair();
+  if (p.err) return pairError(p.err);
+  S.answered = true;
+  const { lo: bid, hi: off } = p, ev = c.ev, n = q.size, fmt = x => (c.big ? money(x) : (x < 0 ? "−$" : "$") + Math.abs(x).toFixed(2));
+  const width = off - bid, inside = bid < ev && off > ev;
+  let ok, verdict;
+  if (!inside) {
+    ok = 0;
+    verdict = bid >= ev ? `Your bid of ${fmt(bid)} is at or above fair value (${fmt(ev)}). A sharp trader sells you ${n} and expects to make ${fmt(n * (bid - ev))} off you.`
+      : `Your offer of ${fmt(off)} is at or below fair value (${fmt(ev)}). A sharp trader buys ${n} from you and expects to make ${fmt(n * (ev - off))} off you.`;
+  } else {
+    ok = width <= c.w ? 1 : width <= 2 * c.w ? .6 : .3;
+    verdict = `Fair value is ${fmt(ev)}, and your market brackets it with a width of ${fmt(width)}. ${ok === 1 ? "Tight enough that people will trade with you." : ok === .6 ? `A bit wide (aim for about ${fmt(c.w)}): fewer trades come your way.` : `Too wide (aim for about ${fmt(c.w)}): you're safe, but almost nobody trades, so you earn little.`}`;
+  }
+  // Simulate one counterparty and one settlement
+  const settle = c.sample();
+  let sim;
+  if (q.informed) {
+    const buys = settle > off, sells = settle < bid;
+    const pnl = buys ? n * (off - settle) : sells ? n * (settle - bid) : 0;
+    sim = buys ? `They saw ${c.big ? money(settle) : settle} and lifted your offer: you sold ${n} at ${fmt(off)}. P&L ${fmt(pnl)}.` : sells ? `They saw ${c.big ? money(settle) : settle} and hit your bid: you bought ${n} at ${fmt(bid)}. P&L ${fmt(pnl)}.` : `They saw ${c.big ? money(settle) : settle}, inside your market, and passed. P&L $0.`;
+    sim += " An informed trader only trades when it hurts you, so every fill you get here loses money. That's adverse selection: conditional on being filled, the value has moved against you. Quote wider (or not at all) against people who know more.";
+  } else {
+    // A mispriced quote gets picked off on the wrong side; a fair one trades either way at random
+    const buy = !inside ? off <= ev : Math.random() < .5, price = buy ? off : bid;
+    const pnl = buy ? n * (off - settle) : n * (settle - bid), edge = buy ? n * (off - ev) : n * (ev - bid);
+    sim = `A trader ${buy ? `lifted your offer: you sold ${n} at ${fmt(price)}` : `hit your bid: you bought ${n} at ${fmt(price)}`}. It settled at ${c.big ? money(settle) : settle}: P&L ${fmt(pnl)}. Your expected edge on that trade was ${fmt(edge)}${inside ? "; over many trades, edge is what you earn, while single results are noise" : ""}.`;
+  }
+  const r = record(ok);
+  $("#lowIn").disabled = $("#highIn").disabled = true;
+  showFeedback(ok, `<div>Your market: <b class="num">${fmt(bid)} at ${fmt(off)}, ${n} up</b>.</div><div>${verdict}</div>
+    <div class="muted">${esc(c.how)}</div>
+    <div class="sim">${sim}</div>${formulaHTML(q.informed ? ["condFill", "edge"] : ["edge", "pnl"])}
+    <span class="quip">+${r.gained} XP</span>`);
+}
+function answerCI() {
+  if (S.answered) return;
+  const q = current(), p = readPair();
+  if (p.err) return pairError(p.err);
+  S.answered = true;
+  const { lo, hi } = p, a = q.answer;
+  const hit = lo <= a && a <= hi;
+  const tooWide = hit && (lo > 0 ? hi / lo > 20 : hi > 5 * a);
+  const ok = hit ? (tooWide ? .5 : 1) : 0;
+  const r = record(ok);
+  S.items[S.items.length - 1].hit = hit ? 1 : 0;
+  const session = S.items.filter(i => i.f === "cal"), sh = session.filter(i => i.hit).length;
+  $("#lowIn").disabled = $("#highIn").disabled = true;
+  showFeedback(ok, `<div>Answer: <b class="num">${a.toLocaleString("en-US")}</b>${q.note ? ` <span class="muted">· ${esc(q.note)}</span>` : ""}</div>
+    <div>Your range: <span class="num">${lo.toLocaleString("en-US")} to ${hi.toLocaleString("en-US")}</span> · ${hit ? (tooWide ? "Contains it, but so wide it barely says anything. Half credit." : "Contains it.") : "Missed. If this keeps happening, your ranges are too narrow."}</div>
+    <div class="muted">This session: ${sh} of ${session.length} intervals contained the answer. Well calibrated 90% intervals hit about 9 in 10.</div>
+    ${formulaHTML(["ciDef"])}<span class="quip">+${r.gained} XP</span>`);
+}
+
+/* ============================================================
    Rendering: game
    ============================================================ */
 function renderGame() {
@@ -1961,6 +2736,8 @@ function contextBlock(q) {
 }
 
 const KEYHINT = {
+  market: "<kbd>Tab</kbd> moves to the offer · <kbd>Enter</kbd> quotes · <kbd>Esc</kbd> quit",
+  ci: "<kbd>Tab</kbd> moves to the high end · <kbd>Enter</kbd> locks in · <kbd>Esc</kbd> quit",
   mcq: "Keys: <kbd>1</kbd>–<kbd>4</kbd> pick an option · <kbd>Enter</kbd> next · <kbd>Esc</kbd> quit",
   auto: "Answers submit automatically once you've typed every digit · <kbd>Esc</kbd> quit",
   num: "<kbd>Enter</kbd> submit · suffixes k / m / b and % work · <kbd>Esc</kbd> quit",
@@ -1995,10 +2772,10 @@ function renderQuestion() {
       ${q.tms ? `<div class="fuse" title="Standard: ${(q.tms / 1000).toFixed(1)}s"><i id="fuseBar" style="animation-duration:${q.tms}ms"></i></div>` : ""}
       ${q.auto ? `<form class="factform" id="numForm" autocomplete="off"><input id="numIn" class="fact-in" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit === "%" ? `<span class="fact-unit">%</span>` : ""}</form>`
       : `<form class="numrow" id="numForm" autocomplete="off">
-        <input id="numIn" inputmode="text" placeholder="${q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m · use k / m / b"}" aria-label="Your answer">
+        <input id="numIn" inputmode="text" placeholder="${q.prob ? "e.g. 3/7, 0.43 or 43%" : q.skill === "quant" ? "e.g. 4.25 or 17/4" : q.unit === "%" ? "e.g. 12.5%" : q.unit === "yrs" ? "e.g. 3.5" : "e.g. 2.4m · use k / m / b"}" aria-label="Your answer">
         <button class="btn primary" type="submit">Submit</button>
       </form>`}
-      ${q.sprint ? `<div class="flash" id="flash"></div>` : `<p class="hint">Within ${Math.round(q.tol * 100)}% counts.${q.auto ? "" : " Suffixes k / m / b work."}</p>`}
+      ${q.sprint ? `<div class="flash" id="flash"></div>` : q.skill === "quant" ? `<p class="hint">Fractions like 3/7 work${q.prob ? ", as do decimals and percents" : ""}.</p>` : `<p class="hint">Within ${Math.round(q.tol * 100)}% counts.${q.auto ? "" : " Suffixes k / m / b work."}</p>`}
       <div id="fbslot"></div>`;
     const inp = $("#numIn"); inp.focus();
     $("#numForm").addEventListener("submit", e => { e.preventDefault(); answerNum(q.auto ? slotValue(q, inp.value) : inp.value); });
@@ -2007,6 +2784,10 @@ function renderQuestion() {
       if (inp.value !== clean) inp.value = clean;
       if ((clean.match(/\d/g) || []).length >= q.auto) answerNum(slotValue(q, clean));
     });
+  } else if (q.type === "market") {
+    renderMarketQ(q, st);
+  } else if (q.type === "ci") {
+    renderCIQ(q, st);
   } else if (q.type === "tap") {
     q.sel = new Set();
     st.innerHTML = `<span class="eyebrow">Case prompt</span>
@@ -2070,6 +2851,8 @@ function answerNum(v) {
   if (!String(v).trim()) return;
   const q = current();
   let x = parseNum(v);
+  // Probabilities: "43%" or a bare 43 both mean 0.43
+  if (q.prob && !isNaN(x) && (/%/.test(v) || (x > 1 && x <= 100))) x = x / 100;
   if (isNaN(x)) { const f = $("#flash") || $("#fbslot"); f.className = f.id === "flash" ? "flash no" : ""; f.innerHTML = `<p class="hint" style="color:var(--bad)">Type a number, like 2.4m or 15%.</p>`; return; }
   S.answered = true;
   // Accept "12" for 12% and money answers given in $M if user typed a bare small number
@@ -2077,10 +2860,10 @@ function answerNum(v) {
   const near = (a) => Math.abs(a - target) <= Math.max(Math.abs(target) * q.tol, q.abs || 0);
   const ok = near(x);
   // Right digits at the wrong scale (e.g. 960 for 960K) is a zeros error, not a pass
-  const magMiss = !ok && [1e3, 1e6, 1e9, 1e-3, 1e-6, 1e-9].some(m => near(x * m));
+  const magMiss = !ok && q.skill !== "quant" && [1e3, 1e6, 1e9, 1e-3, 1e-6, 1e-9].some(m => near(x * m));
   const magNote = magMiss ? "Right digits, wrong magnitude. Count the zeros, or add k / m / b." : "";
   const r = record(ok ? 1 : 0);
-  const shown = q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
+  const shown = q.shown ? q.shown : q.unit === "%" ? (+target.toFixed(2)) + "%" : q.unit === "yrs" ? target.toFixed(1) + " yrs" : q.dollars ? money(target) : fmtNum(target);
   const fb = $("#fuseBar"); if (fb) fb.style.animationPlayState = "paused";
   const fi = $(".fact-in"); if (fi) fi.classList.add(ok ? "ok" : "no");
   const fast = q.tms && r.ms <= q.tms;
@@ -2167,6 +2950,7 @@ async function finish() {
   const rec = { id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ts: Date.now(), mode: s.mode, items: s.items, xp: s.xp, bestCombo: s.bestCombo };
   if (s.sprint) rec.dur = Math.round(Math.min(s.sprint, (Date.now() - s.startTs) / 1000));
   const isMath = s.mode === "math" || s.mode === "weak" || s.mode === "boss" || s.mode.startsWith("m:");
+  const isQuant = s.mode.startsWith("q:") || s.mode === "qmix" || s.mode === "qmm";
   const prev = Store.recs.filter(r => r.mode === s.mode).slice(-1)[0];
   Store.add(rec);
   const acc = s.items.reduce((a, b) => a + b.ok, 0) / s.items.length;
@@ -2220,10 +3004,11 @@ async function finish() {
         <div><b>+${s.xp}</b><span>XP earned</span></div>
         <div><b>×${s.bestCombo}</b><span>best combo</span></div>
       </div>
-      ${isMath ? mathBlock : `<div class="review">${review}</div>`}
+      ${isMath ? mathBlock : isQuant ? quantReview(s) : `<div class="review">${review}</div>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn primary" type="button" id="againBtn">Run it back <kbd style="background:transparent;color:inherit;border-color:currentColor">Enter</kbd></button>
         ${isMath ? `<button class="btn" type="button" id="gymBtn2">Back to Math Gym</button>` : ""}
+        ${isQuant ? `<button class="btn" type="button" id="floorBtn2">Back to Trading Floor</button>` : ""}
         <button class="btn" type="button" id="homeBtn2">Back to dashboard</button>
       </div>
     </section>
@@ -2231,6 +3016,7 @@ async function finish() {
   $("#againBtn").addEventListener("click", () => s.bosses ? renderGym() : startSession(s.mode, { weak: s.weak }));
   if (s.bosses) $("#againBtn").firstChild.textContent = "Pick new bosses ";
   if (isMath) $("#gymBtn2").addEventListener("click", renderGym);
+  if (isQuant) $("#floorBtn2").addEventListener("click", renderFloor);
   $("#homeBtn2").addEventListener("click", renderHome);
   resultsAt = Date.now();
   setTimeout(() => { if (screen === "results" && $("#againBtn") && document.activeElement === document.body) $("#againBtn").focus({ preventScroll: true }); }, 500);

@@ -15,6 +15,7 @@ A short-session drill game for MBB case interview prep (McKinsey BA / Bain). Ope
 | Math Gym | Ten fluency categories, each with a 60 s timed check (see below) | 60 s |
 | Mixed Math Sprint | All Math Gym categories, weighted toward your weakest | 90 s |
 | Problem Solving | Multi-step case math with worked solutions | 4 problems |
+| Trading Floor | Probability & markets course: 12 lessons, each with a drill (see below) | 8 questions |
 
 Exhibits and math are generated fresh each round, so the numbers are never the same twice.
 
@@ -47,6 +48,25 @@ Every answer is tracked per fact (e.g. `7×8`, `3/8`, `M×K`). The Math Gym scre
 (rate = median of the last three 60 s checks), a times-table heat map, fact tables for every category,
 a weakest-facts list you can drill directly, a recommended next category, and a strategy note for each
 category. Drills serve slow and missed facts more often.
+
+## Trading Floor (probability & markets)
+
+A 12-lesson course following the *Probability & Markets* primer, in its order: randomness, counting,
+probability rules, independence, random variables, expected value, confidence intervals, conditional
+probability, making markets, adverse selection, problem-solving tools (recursion, edge cases) and
+interview thoughts. Each lesson has the core idea, formulas, worked examples (every practice question in
+the primer is worked through) and common traps, followed by an 8-question generated drill.
+
+Special question types:
+- **Market making**: quote a bid and offer on a contract (a d20, the max of three dice, a d6 with a
+  reroll option, 1,000,000 × a d6...). Quotes that don't contain the fair value get picked off; tight
+  quotes score best. A simulated trader then trades and the contract settles, showing edge vs. noise.
+  Adverse-selection rounds use a trader who sees the outcome first.
+- **Calibration**: give 90% confidence intervals for checkable facts; the Trading Floor tracks your hit
+  rate against the 90% target.
+
+Probability answers accept fractions (`3/7`), decimals (`0.43`) or percents (`43%`). The course is
+opt-in: Daily Shift doesn't pull from it.
 
 ## Formulas and glossary
 
