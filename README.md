@@ -38,7 +38,7 @@ multi-step work; Miller & Heward 1992 as cited by Rocket Math), scaled down for 
 Tier 2 standards follow case-prep guidance of about 5 s per simple percentage and under 10 s per calculation step.
 
 Fact entry:
-- **Auto-submit.** Tier 1 answers submit as soon as you've typed as many digits as the answer has, with no Enter press (percent answers to one decimal, e.g. `12.5` or `125`).
+- **Auto-submit.** Tier 1 answers submit as soon as you've typed as many digits as the answer has, with no Enter press (percent answers are exact when they end within two decimals, e.g. 1/16 → `6.25`, otherwise one decimal, e.g. 1/3 → `33.3`).
 - **Fuse bar.** Every Math Gym question has a bar that burns down over the standard time; answering before it runs out earns the speed bonus.
 - **Re-ask.** A missed fact comes back 2–3 questions later.
 - **Boss battle.** Your five weakest facts each have 3 HP. A correct answer under the standard time is a hit, a miss heals the boss; beat them all within 90 seconds.
