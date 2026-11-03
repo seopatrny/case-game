@@ -25,11 +25,14 @@ Exhibits and math are generated fresh each round, so the numbers are never the s
 |---|---|---|---|
 | 1 · Facts | Times tables 2–12 | 30 | 95% |
 | 1 · Facts | Fractions ↔ percents | 25 | 95% |
+| 1 · Facts | Division facts (56 ÷ 7) | 30 | 95% |
+| 1 · Facts | Reciprocals (1/15 = 6.7%) | 25 | 95% |
 | 1 · Facts | Squares 11–25 | 20 | 95% |
 | 1 · Facts | 2-digit × 1-digit | 15 | 95% |
 | 2 · Case ops | Big numbers & zeros | 12 | 95% |
 | 2 · Case ops | Percent of | 12 | 95% |
-| 2 · Case ops | Division (2 sig figs) | 10 | 90% |
+| 2 · Case ops | Scale & simplify (size the answer, cancel zeros or a factor) | 12 | 95% |
+| 2 · Case ops | Division (2 sig figs), by divisor type: friendly, composite, awkward | 10 | 90% |
 | 2 · Case ops | % change & growth | 8 | 90% |
 | 2 · Case ops | Margins & breakeven | 6 | 90% |
 | 2 · Case ops | Compounding & CAGR | 6 | 90% |

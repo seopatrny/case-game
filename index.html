@@ -360,6 +360,9 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .pair-at { font-family: var(--display); font-weight: 700; padding-bottom: 10px; }
 .pair-size { padding-bottom: 12px; }
 .sim { border-left: 3px solid var(--accent); padding-left: 10px; font-size: .92rem; }
+.divclass { margin: 0; }
+.facts-layout > .wrap > .row:not(:first-child) { margin-top: 12px; }
+
 @media (max-width: 680px) {
   .lrow { grid-template-columns: 2rem minmax(0, 1fr) auto; }
   .lrow .lacc { display: none; }
@@ -1010,6 +1013,17 @@ const MATH_CATS = {
       return { q: `${x} × ${y}`, a: a * b, tol: 0, tip };
     }
   },
+  divf: {
+    name: "Division facts", tier: 1, cpm: 30, acc: .95,
+    blurb: "56 ÷ 7, 108 ÷ 12: times tables run backwards.",
+    intro: { example: ["63 ÷ 7 = ?", "Don't divide. Ask: 7 times what is 63?", "7 × 9 = 63, so the answer is 9. ✓", "This is how fluent adults actually do division: they recall the multiplication fact. Drilling it here also speeds up your times tables."] },
+    strat: ["Recall the multiplication twin: 72 ÷ 8 → 8 × ? = 72 → 9. Research on adult arithmetic finds most people solve division this way, so the goal is instant multiplication recall in reverse.", "Practice transfers both ways: drilling 72 ÷ 8 makes 8 × 9 faster too.", "These facts are the last step of every case division once you've cancelled zeros and split the divisor."],
+    facts() { const o = []; for (let a = 2; a <= 12; a++) for (let b = a; b <= 12; b++) o.push(a + "×" + b); return o; },
+    make(f) {
+      const [a, b] = f.split("×").map(Number); const [d, q] = Math.random() < .5 ? [a, b] : [b, a];
+      return { q: `${a * b} ÷ ${d}`, a: q, tol: 0, tip: `Think multiplication: ${d} × ${q} = ${a * b}` };
+    }
+  },
   sq: {
     name: "Squares 11–25", tier: 1, cpm: 20, acc: .95,
     blurb: "Squares show up in growth, area-style sizing and the near-square trick.",
@@ -1033,6 +1047,22 @@ const MATH_CATS = {
       const tip = n > 1 ? `Unit fraction: 1/${d} = ${exactNum(100 / d)}% → ×${n} = ${exactNum(p)}%` : `Recall: 1/${d} = ${exactNum(p)}%`;
       if (Math.random() < .7) return { q: `${n}/${d} as a %`, a: p, unit: "%", tol: 0, abs: .2, tip };
       return { q: `${exactNum(p)}% = ? / ${d}`, a: n, tol: 0, tip };
+    }
+  },
+  recip: {
+    name: "Reciprocals", tier: 1, cpm: 25, acc: .95,
+    blurb: "÷15 is ×6.7%: the table that turns division into multiplication.",
+    intro: { example: ["1/15 as a % = ?", "Build it from one you know: 1/3 = 33.3%.", "15 = 3 × 5, so 1/15 = 33.3% ÷ 5 = 6.7%. ✓", "Use it: 840 ÷ 15 = 840 × 6.7% ≈ 56. Multiplying by a percent is easier than long division."] },
+    strat: ["Memorize the core: 1/3 = 33.3%, 1/6 = 16.7%, 1/7 = 14.3%, 1/8 = 12.5%, 1/9 = 11.1%, 1/12 = 8.3%.", "Build the rest by splitting: 1/15 = 1/3 ÷ 5 = 6.7%; 1/45 = 1/9 ÷ 5 ≈ 2.2%; 1/60 = 1/6 ÷ 10 ≈ 1.7%.", "Friendly ones are exact: 1/25 = 4%, 1/40 = 2.5%, 1/50 = 2%, 1/80 = 1.25%, 1/125 = 0.8%.", "In a case: dividing by 15 = multiplying by 0.067. 'Revenue per store = $840K ÷ 15 ≈ $56K.'"],
+    facts() { return ["3", "6", "7", "8", "9", "11", "12", "15", "16", "20", "25", "30", "40", "45", "50", "60", "75", "80", "125"]; },
+    make(f) {
+      const d = +f, p = 100 / d;
+      const build = { 15: "1/3 ÷ 5", 30: "1/3 ÷ 10", 45: "1/9 ÷ 5", 60: "1/6 ÷ 10", 75: "1/3 ÷ 25", 16: "1/8 ÷ 2", 80: "1/8 ÷ 10", 40: "1/4 ÷ 10", 20: "1/2 ÷ 10", 50: "1/5 ÷ 10", 125: "8/1000" };
+      const tip = build[d] ? `Build it: 1/${d} = ${build[d]} = ${exactNum(p)}%` : `Recall: 1/${d} = ${exactNum(p)}%`;
+      const r = Math.random();
+      if (r < .45) return { q: `1/${d} as a %`, a: p, unit: "%", tol: 0, abs: .2, tip };
+      if (r < .8) return { q: `÷${d} is the same as × ?%`, a: p, unit: "%", tol: 0, abs: .2, tip };
+      return { q: `${exactNum(p)}% ≈ 1/?`, a: d, tol: 0, tip };
     }
   },
   mult2: {
@@ -1076,16 +1106,38 @@ const MATH_CATS = {
       return { q: `${f} of ${fmtNum(base)}`, a: p / 100 * base, tol: .01, tip: `${f}: ${tips[p] || "anchor on 10% / 1%"} → ${fmtNum(p / 100 * base)}` };
     }
   },
+  scale: {
+    name: "Scale & simplify", tier: 2, cpm: 12, acc: .95,
+    blurb: "Steps 1 and 2 of every division: size the answer, then shrink the problem.",
+    intro: { example: ["11,300 ÷ 12: how big is the answer?", "Compare: 12 × 1,000 = 12,000, a bit more than 11,300.", "So the answer is just under 1,000: 3 digits.", "Simplify before dividing: 4,800 ÷ 60 → cancel a zero → 480 ÷ 6 = 80. Or factor: 1,200 ÷ 15 → divide both by 3 → 400 ÷ 5 = 80."] },
+    strat: ["Size first: before any digits, say the answer's order of magnitude. This is where 1,000× errors are caught.", "Cancel zeros from both sides: 36,000 ÷ 400 = 360 ÷ 4.", "Cancel a common factor to leave a friendly divisor: 1,200 ÷ 15 → ÷3 both → 400 ÷ 5.", "Then finish with a division fact or a reciprocal."],
+    facts() { return ["digits", "zeros", "factor"]; },
+    make(f) {
+      if (f === "digits") {
+        const d = pick([3, 4, 6, 7, 8, 12, 15, 25, 45]), q = roundTo(rnd(12, 99), 1) * pick([1, 10, 100, 1000]);
+        const x = roundTo(q * d * rnd(.95, 1.05), d > 20 ? 5 : 1), ans = x / d, digits = String(Math.floor(ans)).length;
+        return { q: `${x.toLocaleString("en-US")} ÷ ${d}: how many digits before the decimal point?`, a: digits, tol: 0, tip: `${d} × ${(10 ** (digits - 1)).toLocaleString("en-US")} = ${(d * 10 ** (digits - 1)).toLocaleString("en-US")} ≤ ${x.toLocaleString("en-US")} < ${(d * 10 ** digits).toLocaleString("en-US")}, so ${digits} digits (≈ ${fmtNum(ans)})` };
+      }
+      if (f === "zeros") {
+        const d = pick([3, 4, 6, 7, 8, 12, 15, 25]), k = pick([1, 2]), q = ri(12, 90), extra = pick([10, 100]);
+        const dividend = d * q * extra * 10 ** k, divisor = d * 10 ** k;
+        return { q: `${dividend.toLocaleString("en-US")} ÷ ${divisor.toLocaleString("en-US")} = ? ÷ ${d}`, a: dividend / 10 ** k, tol: 0, tip: `Cancel ${k === 1 ? "one zero" : "two zeros"} from both: ${(dividend / 10 ** k).toLocaleString("en-US")} ÷ ${d} = ${(q * extra).toLocaleString("en-US")}` };
+      }
+      const [d, f1, f2] = pick([[15, 3, 5], [12, 3, 4], [45, 9, 5], [75, 3, 25], [60, 6, 10], [18, 9, 2], [35, 7, 5]]);
+      const q = ri(4, 40) * f2, dividend = q * d;
+      return { q: `${dividend.toLocaleString("en-US")} ÷ ${d}: divide both by ${f1}, giving ? ÷ ${f2}`, a: dividend / f1, tol: 0, tip: `${dividend.toLocaleString("en-US")} ÷ ${f1} = ${(dividend / f1).toLocaleString("en-US")}, then ÷ ${f2} = ${(dividend / d).toLocaleString("en-US")}` };
+    }
+  },
   div: {
     name: "Division (2 sig figs)", tier: 2, cpm: 10, acc: .9,
-    blurb: "Per-unit numbers, payback, share of total. Two significant figures is enough.",
-    strat: ["Cancel zeros first: 4,800 ÷ 60 = 480 ÷ 6 = 80.", "Turn awkward divisors into friendly ones: ÷25 = ×4 ÷ 100; ÷15 = ÷3 then ÷5; ÷45 = ×2 ÷ 90.", "Estimate to two significant figures and say so. 'About 57' is a good answer to 400 ÷ 7."],
-    facts() { return ["÷3", "÷4", "÷6", "÷7", "÷8", "÷9", "÷12", "÷15", "÷25", "÷45", "÷60", "÷75"]; },
+    blurb: "Per-unit numbers, payback, share of total. Pick the method by divisor, stop at two significant figures.",
+    intro: { example: ["11,300 ÷ 12 = ?", "Scale: 12 × 1,000 = 12,000, so the answer is just under 1,000.", "Simplify: no zeros to cancel.", "Method: 12 is composite (3 × 4), so split it: 11,300 ÷ 3 ≈ 3,770, then ÷ 4 ≈ 940.", "Two significant figures: about 940.", "Check: 940 × 12 = 11,280 ≈ 11,300. ✓"] },
+    strat: ["1. Scale: say the order of magnitude first (12 × 1,000 = 12,000, so 11,300 ÷ 12 is just under 1,000).", "2. Simplify: cancel zeros and common factors (4,800 ÷ 60 → 480 ÷ 6).", "3. Pick the method by divisor. Friendly (4, 5, 8, 25, 50): use the reciprocal, e.g. ÷25 = ×4 ÷ 100. Composite (6, 9, 12, 15, 45, 60, 75): split into factors, e.g. ÷12 = ÷3 then ÷4. Awkward primes (3, 7, 13, 17): multiply by the reciprocal, e.g. ÷7 ≈ ×14.3%.", "4. Stop at two significant figures and say \"about\".", "5. Check by multiplying back: 940 × 12 ≈ 11,300.", "Say the steps out loud. An interviewer can follow \"÷3 then ÷4\"; a clever trick they can't follow doesn't help you."],
+    facts() { return ["÷4", "÷5", "÷8", "÷25", "÷50", "÷6", "÷9", "÷12", "÷15", "÷45", "÷60", "÷75", "÷3", "÷7", "÷13", "÷17"]; },
     make(f) {
       const d = parseInt(f.slice(1)); const scale = pick([1, 10, 1000]);
       const dividend = roundTo(d * ri(12, 95) * rnd(.93, 1.07), d > 20 ? 5 : 1) * scale;
-      const tips = { 25: "×4 then ÷100", 15: "÷3 then ÷5", 45: "×2 then ÷90", 75: "×4 then ÷300", 12: "÷3 then ÷4", 6: "÷2 then ÷3", 7: "×1/7 ≈ 14.3%", 9: "×1/9 ≈ 11.1%", 60: "÷6 then ÷10", 8: "halve three times" };
-      return { q: `${fmtNum(dividend)} ÷ ${d}`, a: dividend / d, tol: .02, tip: `÷${d}: ${tips[d] || "cancel zeros, then divide"} → ≈ ${fmtNum(dividend / d)}` };
+      return { q: `${fmtNum(dividend)} ÷ ${d}`, a: dividend / d, tol: .02, tip: divRoutine(dividend, d) };
     }
   },
   pchg: {
@@ -1140,6 +1192,24 @@ const MATH_CATS = {
   },
 };
 const CAT_KEYS = Object.keys(MATH_CATS);
+
+const DIV_CLASS = { 4: "Friendly", 5: "Friendly", 8: "Friendly", 25: "Friendly", 50: "Friendly", 6: "Composite", 9: "Composite", 12: "Composite", 15: "Composite", 45: "Composite", 60: "Composite", 75: "Composite", 3: "Awkward", 7: "Awkward", 13: "Awkward", 17: "Awkward" };
+const DIV_SPLIT = { 6: [2, 3], 9: [3, 3], 12: [3, 4], 15: [3, 5], 45: [9, 5], 60: [6, 10], 75: [3, 25] };
+// The five-step routine, written out for one problem: scale, method by divisor class, two sig figs, check.
+function divRoutine(x, d) {
+  const ans = x / d, sig = +ans.toPrecision(2), mag = 10 ** Math.floor(Math.log10(ans));
+  const words = ["ones", "tens", "hundreds", "thousands", "tens of thousands", "hundreds of thousands", "millions", "tens of millions", "hundreds of millions"][Math.round(Math.log10(mag))] || fmtNum(mag) + "s";
+  const scale = `Scale: ${d} × ${fmtNum(mag)} = ${fmtNum(d * mag)}, so the answer is in the ${words}`;
+  let method;
+  if (d === 25) method = `Friendly: ÷25 = ×4 ÷ 100 → ${fmtNum(x * 4)} ÷ 100 ≈ ${fmtNum(sig)}`;
+  else if (d === 50) method = `Friendly: ÷50 = ×2 ÷ 100 → ${fmtNum(x * 2)} ÷ 100 ≈ ${fmtNum(sig)}`;
+  else if (d === 5) method = `Friendly: ÷5 = ×2 ÷ 10 → ${fmtNum(x * 2)} ÷ 10 ≈ ${fmtNum(sig)}`;
+  else if (d === 4) method = `Friendly: halve twice → ${fmtNum(x / 2)} → ${fmtNum(sig)}`;
+  else if (d === 8) method = `Friendly: halve three times → ${fmtNum(x / 2)} → ${fmtNum(+(x / 4).toPrecision(3))} → ${fmtNum(sig)}`;
+  else if (DIV_SPLIT[d]) { const [a, b] = DIV_SPLIT[d]; method = `Composite: ÷${d} = ÷${a} then ÷${b} → ${fmtNum(+(x / a).toPrecision(3))} → ≈ ${fmtNum(sig)}`; }
+  else method = `Awkward: ÷${d} ≈ ×${exactNum(100 / d)}% → ${fmtNum(x)} × ${dec(1 / d, 3)} ≈ ${fmtNum(sig)}`;
+  return `${scale} · ${method} · check ${fmtNum(sig)} × ${d} ≈ ${fmtNum(sig * d)}`;
+}
 
 function catItem(c, f) {
   const C = MATH_CATS[c]; const g = C.make(f);
@@ -2329,6 +2399,13 @@ const FACT_LABEL = {
   "72": "Rule of 72", "2yr": "2-yr compound", "3yr": "3-yr compound", cagr: "Back out CAGR"
 };
 const factLabel = f => FACT_LABEL[f] || f;
+const factName = (c, f) => {
+  if (c === "divf") { const [a, b] = f.split("×").map(Number); return `${a * b} ÷ ${a}/${b}`; }
+  if (c === "recip") return `1/${f}`;
+  if (c === "scale") return { digits: "Size the answer", zeros: "Cancel zeros", factor: "Cancel a factor" }[f] || f;
+  if (c === "div") return `${f} · ${DIV_CLASS[parseInt(f.slice(1))] || ""}`.replace(/ · $/, "");
+  return factLabel(f);
+};
 
 function gymCard() {
   const gs = gymStats(), ready = CAT_KEYS.filter(k => gs.cats[k].status === "ready").length, f = focusList(gs)[0];
@@ -2371,20 +2448,31 @@ function renderGym() {
   };
   const tierRows = t => CAT_KEYS.filter(k => MATH_CATS[k].tier === t).map(row).join("");
 
-  // Times-table heat map
-  let heat = `<span class="hh">×</span>`;
-  for (let b = 2; b <= 12; b++) heat += `<span class="hh">${b}</span>`;
-  for (let a = 2; a <= 12; a++) {
-    heat += `<span class="hh">${a}</span>`;
-    for (let b = 2; b <= 12; b++) {
-      const key = Math.min(a, b) + "×" + Math.max(a, b), fs = factState(gs, "mult", key);
-      heat += `<span class="hc ${fs.st}" title="${a} × ${b} = ${a * b}${fs.n ? ` · avg ${(fs.ms / 1000).toFixed(1)}s · ${pct(1 - fs.miss)} recent accuracy · ${fs.n} tries` : " · not seen yet"}">${fs.n ? (fs.ms / 1000).toFixed(1) : ""}</span>`;
+  // Heat maps for times tables and their division twins
+  const heatGrid = (cat, sym) => {
+    let h = `<span class="hh">${sym}</span>`;
+    for (let b = 2; b <= 12; b++) h += `<span class="hh">${b}</span>`;
+    for (let a = 2; a <= 12; a++) {
+      h += `<span class="hh">${a}</span>`;
+      for (let b = 2; b <= 12; b++) {
+        const key = Math.min(a, b) + "×" + Math.max(a, b), fs = factState(gs, cat, key);
+        const label = cat === "divf" ? `${a * b} ÷ ${b} = ${a}` : `${a} × ${b} = ${a * b}`;
+        h += `<span class="hc ${fs.st}" title="${label}${fs.n ? ` · avg ${(fs.ms / 1000).toFixed(1)}s · ${pct(1 - fs.miss)} recent accuracy · ${fs.n} tries` : " · not seen yet"}">${fs.n ? (fs.ms / 1000).toFixed(1) : ""}</span>`;
+      }
     }
-  }
-  const panels = CAT_KEYS.filter(k => k !== "mult").map(k => {
+    return h;
+  };
+  const heat = heatGrid("mult", "×"), heatDiv = heatGrid("divf", "÷");
+  const divClassLine = () => {
+    const by = {};
+    for (const f of MATH_CATS.div.facts()) { const fs = factState(gs, "div", f), cl = DIV_CLASS[parseInt(f.slice(1))]; if (fs.n) (by[cl] = by[cl] || []).push(fs.ms); }
+    const parts = ["Friendly", "Composite", "Awkward"].map(cl => by[cl] ? `${cl} <b class="num">${(by[cl].reduce((a, b) => a + b, 0) / by[cl].length / 1000).toFixed(1)}s</b>` : `${cl} <span class="muted">—</span>`);
+    return `<p class="small divclass">Avg by divisor type: ${parts.join(" · ")} <span class="muted">(standard ${(60 / MATH_CATS.div.cpm).toFixed(0)}s)</span></p>`;
+  };
+  const panels = CAT_KEYS.filter(k => k !== "mult" && k !== "divf").map(k => {
     const C = MATH_CATS[k];
-    return `<div class="fpanel"><div class="row"><h3>${esc(C.name)}</h3><button class="linkbtn" type="button" data-cat="${k}">Drill</button></div>
-      <div class="fchips">${C.facts().map(f => { const fs = factState(gs, k, f); return `<span class="fchip ${fs.st}" title="${esc(factLabel(f))}${fs.n ? ` · avg ${(fs.ms / 1000).toFixed(1)}s vs ${(fs.tms / 1000).toFixed(1)}s standard · ${pct(1 - fs.miss)} recent accuracy · ${fs.n} tries` : " · not seen yet"}">${esc(factLabel(f))}</span>`; }).join("")}</div></div>`;
+    return `<div class="fpanel"><div class="row"><h3>${esc(C.name)}</h3><button class="linkbtn" type="button" data-cat="${k}">Drill</button></div>${k === "div" ? divClassLine() : ""}
+      <div class="fchips">${C.facts().map(f => { const fs = factState(gs, k, f); return `<span class="fchip ${fs.st}" title="${esc(factName(k, f))}${fs.n ? ` · avg ${(fs.ms / 1000).toFixed(1)}s vs ${(fs.tms / 1000).toFixed(1)}s standard · ${pct(1 - fs.miss)} recent accuracy · ${fs.n} tries` : " · not seen yet"}">${esc(factName(k, f))}</span>`; }).join("")}</div></div>`;
   }).join("");
 
   // Weakest facts across every category
@@ -2393,7 +2481,7 @@ function renderGym() {
   weak.sort((a, b) => b.score - a.score);
   const top = weak.slice(0, 12);
   const weakTable = top.length ? `<div class="ptable-wrap"><table class="ptable" style="min-width:460px"><thead><tr><th>Fact</th><th>Category</th><th>Avg time / standard</th><th>Recent accuracy</th><th>Tries</th></tr></thead><tbody>
-    ${top.map(x => `<tr><td><b>${esc(factLabel(x.f))}</b></td><td class="muted">${esc(MATH_CATS[x.k].name)}</td><td class="num">${(x.ms / 1000).toFixed(1)}s <span class="muted">/ ${(x.tms / 1000).toFixed(1)}s</span></td><td class="num ${x.st === "miss" ? "neg" : ""}">${pct(1 - x.miss)}</td><td class="num">${x.n}</td></tr>`).join("")}
+    ${top.map(x => `<tr><td><b>${esc(factName(x.k, x.f))}</b></td><td class="muted">${esc(MATH_CATS[x.k].name)}</td><td class="num">${(x.ms / 1000).toFixed(1)}s <span class="muted">/ ${(x.tms / 1000).toFixed(1)}s</span></td><td class="num ${x.st === "miss" ? "neg" : ""}">${pct(1 - x.miss)}</td><td class="num">${x.n}</td></tr>`).join("")}
     </tbody></table></div>` : `<p class="muted">No slow or missed facts yet. Take a few timed checks and the ones that cost you time will show up here.</p>`;
 
   $("#view").innerHTML = `
@@ -2433,7 +2521,10 @@ function renderGym() {
       <div class="facts-layout">
         <div class="wrap" style="gap:8px"><div class="row"><h3>Times tables · avg seconds</h3><button class="linkbtn" type="button" data-cat="mult">Drill</button></div>
           <div class="heat" role="img" aria-label="Times table heat map; the weakest facts are also listed in the table below">${heat}</div>
-          <p class="muted small">Standard: ${(60 / MATH_CATS.mult.cpm).toFixed(1)}s per fact. Drills automatically serve your slow and missed cells more often.</p></div>
+          <p class="muted small">Standard: ${(60 / MATH_CATS.mult.cpm).toFixed(1)}s per fact. Drills automatically serve your slow and missed cells more often.</p>
+          <div class="row"><h3>Division facts · avg seconds</h3><button class="linkbtn" type="button" data-cat="divf">Drill</button></div>
+          <div class="heat" role="img" aria-label="Division facts heat map: row number is the answer, column is the divisor">${heatDiv}</div>
+          <p class="muted small">Cell = (row × column) ÷ column. Both directions of a fact share a cell.</p></div>
         <div class="fpanels">${panels}</div>
       </div>
     </section>
@@ -2446,7 +2537,7 @@ function renderGym() {
 
     <section class="card wrap standards" style="gap:10px">
       <h2>How the standards are set</h2>
-      <p><b>Tier 1, fact fluency.</b> Research on basic-fact fluency finds that learners who answer about 30–40 facts correctly per minute keep progressing on harder multi-step work, while those under about 30 tend to stall (Miller &amp; Heward, 1992, as summarized by Rocket Math). Precision-teaching aims for written facts run higher, 60–100 digits per minute. Typing is slower than writing, so the standard here is 30 per minute for single facts, scaled down for longer answers: 25 for fractions, 20 for squares, 15 for 2-digit × 1-digit. Accuracy must be at least 95%.</p>
+      <p><b>Tier 1, fact fluency.</b> Research on basic-fact fluency finds that learners who answer about 30–40 facts correctly per minute keep progressing on harder multi-step work, while those under about 30 tend to stall (Miller &amp; Heward, 1992, as summarized by Rocket Math). Precision-teaching aims for written facts run higher, 60–100 digits per minute. Typing is slower than writing, so the standard here is 30 per minute for single facts (times tables and division facts), scaled down for longer answers: 25 for fractions and reciprocals, 20 for squares, 15 for 2-digit × 1-digit. Accuracy must be at least 95%.</p>
       <p><b>Tier 2, case operations.</b> No firm publishes a number. Prep sources agree on about 5 seconds for a simple percentage and under 10 seconds per calculation step, with no single step over 20 seconds (Hacking the Case Interview, Management Consulted). That works out to 12 per minute for one-step moves, 8–10 for division and % change, and 6 for two-step moves like breakeven or compounding. Accuracy must be at least 90%, within 1–3% of the exact figure.</p>
       <p><b>Why tier 1 comes first.</b> Fluency research treats basic facts as components of composite skills: when the components become automatic, the composite skills improve faster and hold up better under pressure (Binder, 1996). In a case, that means working memory goes to the logic instead of to 7 × 8. The focus pick weights tier 1 higher for this reason.</p>
       <p><b>How it's measured.</b> A category's rate comes only from its own 60-second checks: the median of your last three, so one bad run doesn't swing it. Every answer, including mixed sprints and Daily Shift items, feeds the per-fact tables and accuracy.</p>
@@ -2746,7 +2837,7 @@ const KEYHINT = {
 };
 function bossBar() {
   const cur = current(), ck = cur.c + "|" + cur.f;
-  return `<div class="bosses">${S.bosses.map(b => { const [c, f] = b.k.split("|"); return `<div class="boss ${b.hp ? "" : "dead"} ${b.k === ck ? "cur" : ""}" data-k="${esc(b.k)}"><span class="bname">${esc(factLabel(f))}</span><span class="hp">${[0, 1, 2].map(i => `<i class="${i < b.hp ? "on" : ""}"></i>`).join("")}</span><span class="bcat">${esc(MATH_CATS[c].name)}</span></div>`; }).join("")}</div>`;
+  return `<div class="bosses">${S.bosses.map(b => { const [c, f] = b.k.split("|"); return `<div class="boss ${b.hp ? "" : "dead"} ${b.k === ck ? "cur" : ""}" data-k="${esc(b.k)}"><span class="bname">${esc(factName(c, f))}</span><span class="hp">${[0, 1, 2].map(i => `<i class="${i < b.hp ? "on" : ""}"></i>`).join("")}</span><span class="bcat">${esc(MATH_CATS[c].name)}</span></div>`; }).join("")}</div>`;
 }
 function renderQuestion() {
   const q = current();
@@ -2970,7 +3061,7 @@ async function finish() {
   if (s.bosses) {
     const dead = s.bosses.filter(b => !b.hp).length;
     mathBlock += `<div class="std ${dead === s.bosses.length ? "met" : ""}"><b class="num">${dead}/${s.bosses.length}</b> bosses defeated${dead === s.bosses.length ? ` in ${rec.dur} seconds` : ""}. A hit needs a correct answer under the standard time.</div>
-      <div class="bosses">${s.bosses.map(b => { const [c, f] = b.k.split("|"); return `<div class="boss ${b.hp ? "" : "dead"}"><span class="bname">${esc(factLabel(f))}</span><span class="hp">${[0, 1, 2].map(i => `<i class="${i < b.hp ? "on" : ""}"></i>`).join("")}</span><span class="bcat">${esc(MATH_CATS[c].name)}</span></div>`; }).join("")}</div>`;
+      <div class="bosses">${s.bosses.map(b => { const [c, f] = b.k.split("|"); return `<div class="boss ${b.hp ? "" : "dead"}"><span class="bname">${esc(factName(c, f))}</span><span class="hp">${[0, 1, 2].map(i => `<i class="${i < b.hp ? "on" : ""}"></i>`).join("")}</span><span class="bcat">${esc(MATH_CATS[c].name)}</span></div>`; }).join("")}</div>`;
   }
   if (isMath) {
     const cpm = correctN / (rec.dur / 60);
