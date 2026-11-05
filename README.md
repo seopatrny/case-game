@@ -12,12 +12,26 @@ A short-session drill game for MBB case interview prep (McKinsey BA / Bain). Ope
 | Three-Sentence Close | Recommendation discipline: pick the best close, then write your own (auto-graded) | 4 rounds |
 | Bucket Sharpener | Sub-bucket specificity: swap generic points for metric + mechanism + cause | 8 calls |
 | Lingo Lightning | Industry vocabulary sprint | 60 s |
+| Framework Recall | Flashcards for the HTCI frameworks, with spaced repetition (see below) | ~12 cards |
 | Math Gym | Ten fluency categories, each with a 60 s timed check (see below) | 60 s |
 | Mixed Math Sprint | All Math Gym categories, weighted toward your weakest | 90 s |
 | Problem Solving | Multi-step case math with worked solutions | 4 problems |
 | Trading Floor | Probability & markets course: 12 lessons, each with a drill (see below) | 8 questions |
 
 Exhibits and math are generated fresh each round, so the numbers are never the same twice.
+
+## Framework Recall
+
+Four decks from the HTCI frameworks handoff: framework-building strategies, the ten core frameworks
+(plus industry revenue formulas), classic frameworks as sub-bucket tools, and pick-the-framework prompts,
+plus bucket drill-downs. Card types: name → buckets (flip, then self-grade Got it / Partial / Missed),
+prompt → framework (4 options), and bucket → sub-questions (type yours, flip, compare).
+
+Sessions are about 12 cards. Each card's schedule comes from saved results: missed cards return later
+in the same session and the next day; clean hits come back in 1, then 3 days; 3 clean hits in a row
+marks a card mastered and it returns weekly. A timer shows seconds per card (target 10 s for name →
+buckets). The home screen shows mastery per deck, and the mode is marked **case-ready** once Decks 2 and
+4 are at 80% mastery.
 
 ## Math Gym
 

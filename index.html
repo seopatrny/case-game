@@ -363,6 +363,26 @@ textarea.close-in { width: 100%; min-height: 140px; font: inherit; font-size: 1r
 .divclass { margin: 0; }
 .facts-layout > .wrap > .row:not(:first-child) { margin-top: 12px; }
 
+/* framework recall */
+.fcard { border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface-2); padding: 22px 20px; display: flex; flex-direction: column; gap: 14px; align-items: center; text-align: center; }
+.fc-front { font-family: var(--display); font-weight: 800; font-size: clamp(1.4rem, 4.5vw, 2rem); line-height: 1.2; text-wrap: balance; }
+.fcard.sq .fc-front { font-size: clamp(1.2rem, 3.6vw, 1.6rem); }
+.fc-back { border-top: 1px dashed var(--line); padding-top: 14px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.fc-main { font-size: 1.08rem; font-weight: 600; }
+.fc-note { font-size: .92rem; color: var(--muted); }
+.fc-back ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 1rem; font-weight: 600; }
+.fc-meta { display: flex; gap: 10px; justify-content: center; font-size: .9rem; }
+#fcTimer { font-weight: 600; }
+.grades { display: flex; gap: 8px; flex-wrap: wrap; }
+.grade-ok { border-color: var(--good); color: var(--good); }
+.grade-part { border-color: var(--hl); }
+.grade-miss { border-color: var(--bad); color: var(--bad); }
+.deckbars { display: grid; gap: 4px; width: 100%; }
+.dbar { display: grid; grid-template-columns: minmax(0, 8.5rem) 1fr 2.6rem; gap: 8px; align-items: center; font-size: .78rem; color: var(--muted); }
+.dbar .mbar { width: 100%; }
+.dbar b { text-align: right; color: var(--ink); }
+.deckbars.wide .dbar { grid-template-columns: minmax(0, 10rem) 1fr 3.5rem; font-size: .85rem; }
+
 @media (max-width: 680px) {
   .lrow { grid-template-columns: 2rem minmax(0, 1fr) auto; }
   .lrow .lacc { display: none; }
@@ -504,6 +524,7 @@ const SKILLS = {
   math:    { name: "Mental math", short: "Math", target: 12000 },
   problem: { name: "Case problem solving", short: "Problems", target: 90000 },
   quant:   { name: "Probability & markets", short: "Quant", target: 45000 },
+  frame:   { name: "Framework recall", short: "Frameworks", target: 10000 },
 };
 const MODES = {
   metric:  { name: "Metric Hunt", skill: "metric", tag: "Gap 1", blurb: "A P&L exhibit drops. Find which line moved, by how much, then say it first.", len: "3 exhibits · ~4 min" },
@@ -513,6 +534,7 @@ const MODES = {
   lingo:   { name: "Lingo Lightning", skill: "lingo", tag: "Vocab", blurb: "60 seconds of terms and definitions. NIM, CAC, RevPAR, take rate.", len: "60 s sprint" },
   math:    { name: "Mixed Math Sprint", skill: "math", tag: "Math", blurb: "90 seconds across all ten Math Gym categories, weighted toward your weakest.", len: "90 s sprint" },
   problem: { name: "Problem Solving", skill: "problem", tag: "Math", blurb: "Multi-step case math: market sizing, payback, LTV, margin targets, NII.", len: "4 problems · ~6 min" },
+  frames:  { name: "Framework Recall", skill: "frame", tag: "Frameworks", blurb: "", len: "~12 cards · 5 min" },
   daily:   { name: "Daily Shift", skill: null, tag: "Mixed", blurb: "", len: "~12 items · ~7 min" },
 };
 function modeName(m) {
@@ -2061,6 +2083,161 @@ const QTERMS = [
 ];
 
 /* ============================================================
+   CONTENT: Framework Recall
+   Four decks from the HTCI frameworks handoff. Content is used as
+   written; card backs stay short enough to read in about 5 seconds.
+   ============================================================ */
+const FW_D1 = [
+  { name: "From scratch", back: "List 3–4 statements that must be true to recommend. Each becomes a bucket. Each must be falsifiable and case-specific.", when: "Unusual cases with no standard framework" },
+  { name: "8–10 business areas", back: "Scan Market, Competition, Capabilities, Financials, Risks, Alternatives, Customers, Operations. Pick 3–5, then populate.", when: "Any case; a checklist, not a framework" },
+  { name: "Stakeholder breakdown", back: "Map each party, then its incentives, constraints and desired outcome.", when: "Nonprofits, platforms, multi-sided markets, public sector" },
+  { name: "Process breakdown", back: "Map the process step by step. Per step: time, cost, quality, handoff. Find the bottleneck.", when: "Operations and efficiency" },
+  { name: "Two-part MECE", back: "Split X / not-X: internal/external, short/long term, supply/demand, fixed/variable. Add 2–3 bullets per cell.", when: "Need instant MECE; can layer into 4 quadrants" },
+];
+const FW_D2 = [
+  { name: "Profitability", buckets: "Profit = Revenue − Costs. Revenue = Price × Quantity. Costs = Fixed + Variable.", must: "Two phases: first which branch moved (quant), then why (customers, competitors, market)" },
+  { name: "Market entry", buckets: "Market attractiveness → Competition → Capabilities → Financials", must: "Financials: break-even timeline, IRR vs. hurdle rate" },
+  { name: "M&A", buckets: "Market → Target → Synergies → Valuation", must: "Name both revenue and cost synergies. Include integration risk and \"do nothing\"" },
+  { name: "Pricing", buckets: "Cost floor → Competitor anchor → Value ceiling", must: "Value share is typically 10–30% of value created" },
+  { name: "New product", buckets: "Segment → Unmet need → Capabilities → Profitability + competitive response", must: "Ask how competitors respond if it works" },
+  { name: "Market sizing", buckets: "Population → Penetration → Frequency → Spend per unit", must: "Segment into 2–3 groups first; sanity-check top-down vs. bottom-up" },
+  { name: "Growth strategy", buckets: "Organic levers → Inorganic levers → Prioritize (impact × feasibility × risk)", must: "Quantify each lever, not just name it" },
+  { name: "Operations", buckets: "Map steps → Find bottleneck → Quantify impact → Prioritized solutions", must: "Per step: time, cost, quality, handoff" },
+  { name: "Cost optimization", buckets: "Fixed vs. variable → Direct vs. indirect → Benchmark → Prioritize", must: "Procurement renegotiation often saves 10–25%" },
+  { name: "Competitive response", buckets: "Threat severity → Client position → Response options → Evaluate", must: "Always price \"do nothing\" as an option" },
+];
+const FW_FORMULAS = [
+  ["Retail revenue", "Traffic × Conversion rate × Average transaction value"],
+  ["SaaS revenue", "Subscribers × ARPU × Retention rate"],
+  ["Airline revenue", "Available seat miles × Load factor × Yield"],
+  ["Bank profit", "Net interest income + Non-interest income − Credit losses − OpEx"],
+  ["M&A valuation", "EBITDA × industry multiple = implied EV; compare to asking price"],
+  ["PE returns", "IRR vs. ~20% hurdle, MOIC, value creation plan"],
+];
+const FW_D3 = [
+  { name: "Porter's Five Forces", parts: "Supplier power, buyer power, substitutes, new entrants, rivalry", drop: "Competition bucket; focus on the 2–3 forces that matter" },
+  { name: "3 Cs", parts: "Company, customers, competitors", drop: "The \"why\" phase of profitability, or ambiguous strategy cases" },
+  { name: "4 Ps", parts: "Product, price, place, promotion", drop: "Go-to-market in new product or marketing cases" },
+  { name: "SWOT", parts: "Strengths, weaknesses, opportunities, threats", drop: "Capabilities bucket in market entry" },
+  { name: "BCG matrix", parts: "Stars, cash cows, question marks, dogs", drop: "Growth cases with a multi-product portfolio" },
+  { name: "McKinsey 7S", parts: "Strategy, structure, systems, shared values, skills, style, staff", drop: "Integration risk in M&A; org transformation" },
+];
+const FW_D4 = [
+  ["Why are profits declining?", "Profitability", "A restaurant chain's profits fell 20% on flat revenue."],
+  ["Should we enter this market?", "Market entry", "A European apparel brand is weighing the U.S."],
+  ["Should we acquire this company?", "M&A", "A CPG company may buy a DTC startup for $500M."],
+  ["How should we price this?", "Pricing", "A device cuts surgery time 30%; surgeries cost $50K."],
+  ["Should we launch this product?", "New product", "A bank considers launching a teen debit card."],
+  ["How big is this market?", "Market sizing", "Estimate annual U.S. ride-share revenue."],
+  ["How can we grow?", "Growth strategy", "A SaaS firm wants to double revenue in 3 years."],
+  ["Why are operations underperforming?", "Operations", "A warehouse's order delivery times doubled."],
+  ["How can we cut costs?", "Cost optimization", "A hospital must cut costs 15%."],
+  ["How do we respond to a competitor?", "Competitive response", "A rival just cut prices 25%."],
+];
+const FW_LAYERING = "Most real cases combine 2+ frameworks. Market entry usually includes profitability; profitability often needs 3 Cs or Porter's. Then customize labels to the industry.";
+// Bucket drill-downs: each back restates the doc's own detail for that bucket as questions.
+const FW_SUBQ = [
+  ["M&A", "Synergies", ["What revenue synergies?", "What cost synergies?", "What is the integration risk (McKinsey 7S)?", "Is it better than doing nothing?"]],
+  ["M&A", "Valuation", ["EBITDA × industry multiple = implied EV?", "How does that compare to the asking price?"]],
+  ["Market entry", "Competition", ["Which 2–3 of Porter's forces matter?", "Supplier power, buyer power, substitutes, new entrants, rivalry"]],
+  ["Market entry", "Capabilities", ["SWOT: strengths and weaknesses?", "Opportunities and threats?"]],
+  ["Market entry", "Financials", ["What is the break-even timeline?", "Does IRR clear the hurdle rate?"]],
+  ["Profitability", "The \"why\" phase", ["Customers?", "Competitors?", "Market? (3 Cs)"]],
+  ["Pricing", "Value ceiling", ["How much value does it create for the customer?", "What share can we capture (typically 10–30%)?"]],
+  ["New product", "Profitability + competitive response", ["Is it profitable?", "How do competitors respond if it works?"]],
+  ["Market sizing", "Segment", ["Which 2–3 groups first?", "Does bottom-up match top-down?"]],
+  ["Growth strategy", "Prioritize", ["Impact?", "Feasibility?", "Risk?", "Quantified for each lever?"]],
+  ["Operations", "Each step", ["Time? Cost?", "Quality? Handoff?", "Which step is the bottleneck?"]],
+  ["Competitive response", "Response options", ["What are our options?", "What does \"do nothing\" cost?"]],
+];
+const FW_DECKS = {
+  d1: { name: "Deck 1 · Framework-building strategies", short: "Strategies" },
+  d2: { name: "Deck 2 · Ten core frameworks", short: "Core frameworks" },
+  d3: { name: "Deck 3 · Classic tools", short: "Classic tools" },
+  d4: { name: "Deck 4 · Pick the framework", short: "Pick the framework" },
+  sq: { name: "Bucket drill-downs", short: "Drill-downs" },
+};
+const FW_TARGET = { flip: 10000, pick: 8000, subq: 30000 };
+
+let _fwCards = null;
+function frameCards() {
+  if (_fwCards) return _fwCards;
+  const c = [];
+  FW_D1.forEach((s, i) => {
+    c.push({ id: "d1n" + i, deck: "d1", kind: "flip", label: "Strategy → method", front: s.name, back: [s.back], note: "Use when: " + s.when });
+    c.push({ id: "d1w" + i, deck: "d1", kind: "pick", label: "When to use → strategy", front: `Which framework-building strategy fits? ${s.when}.`, answer: s.name, pool: FW_D1.map(x => x.name), back: `${s.name}: ${s.back}` });
+  });
+  FW_D2.forEach((f, i) => c.push({ id: "d2f" + i, deck: "d2", kind: "flip", label: "Name → buckets", front: f.name, back: [f.buckets], note: "Must remember: " + f.must }));
+  FW_FORMULAS.forEach(([n, b], i) => c.push({ id: "d2x" + i, deck: "d2", kind: "flip", label: "Industry formula", front: n, back: [b] }));
+  FW_D3.forEach((t, i) => c.push({ id: "d3c" + i, deck: "d3", kind: "flip", label: "Tool → parts", front: t.name, back: [t.parts], note: "Drop it into: " + t.drop }));
+  FW_D4.forEach(([q, fw, prompt], i) => c.push({ id: "d4p" + i, deck: "d4", kind: "pick", label: "Prompt → framework", fronts: [q, prompt], answer: fw, pool: FW_D2.map(x => x.name), back: `${fw}: ${FW_D2.find(x => x.name === fw).buckets}` }));
+  FW_SUBQ.forEach(([fw, bucket, qs], i) => c.push({ id: "sq" + i, deck: "sq", kind: "subq", label: "Bucket → sub-questions", front: `${fw} → ${bucket}`, back: qs }));
+  return (_fwCards = c);
+}
+const cardById = id => frameCards().find(c => c.id === id);
+
+// Scheduling comes from the saved records: a card's streak of clean hits and its last result.
+const DAY_MS = 864e5;
+const dayStart = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+function frameState() {
+  const st = {};
+  for (const r of Store.recs.slice().sort((a, b) => a.ts - b.ts)) for (const it of r.items) {
+    if (it.s !== "frame" || !it.f) continue;
+    const o = st[it.f] || (st[it.f] = { n: 0, streak: 0, last: 0, lastOk: 0 });
+    o.n++; o.last = r.ts; o.lastOk = it.ok; o.streak = it.ok >= 1 ? o.streak + 1 : 0;
+  }
+  for (const k in st) {
+    const o = st[k];
+    o.gap = o.lastOk < 1 ? 1 : o.streak >= 3 ? 7 : o.streak === 2 ? 3 : 1;   // missed or partial → tomorrow; mastered → weekly
+    o.due = dayStart(o.last) + o.gap * DAY_MS;
+    o.mastered = o.streak >= 3;
+  }
+  return st;
+}
+function deckMastery(st) {
+  const out = {};
+  for (const d of Object.keys(FW_DECKS)) {
+    const cs = frameCards().filter(c => c.deck === d);
+    const m = cs.filter(c => st[c.id] && st[c.id].mastered).length, seen = cs.filter(c => st[c.id]).length;
+    out[d] = { total: cs.length, mastered: m, seen, pct: m / cs.length };
+  }
+  return out;
+}
+const frameReady = dm => dm.d2.pct >= .8 && dm.d4.pct >= .8;
+const dueLabel = (o) => { const days = Math.round((o.due - dayStart(Date.now())) / DAY_MS); return days <= 0 ? "today" : days === 1 ? "tomorrow" : days >= 7 ? "in a week" : `in ${days} days`; };
+
+function cardItem(card, again) {
+  const base = { skill: "frame", c: card.deck, f: card.id, card, again: !!again, tms: FW_TARGET[card.kind], context: FW_DECKS[card.deck].name };
+  if (card.kind !== "pick") return { ...base, type: card.kind, title: card.front };
+  const front = card.fronts ? pick(card.fronts) : card.front;
+  const wrong = shuffle(card.pool.filter(x => x !== card.answer)).slice(0, 3);
+  return { ...base, type: "mcq", shuffle: true, title: esc(front), options: [card.answer, ...wrong], answer: 0,
+    explain: `<b>${esc(card.back.split(":")[0])}</b>:${esc(card.back.slice(card.back.indexOf(":") + 1))}${card.deck === "d4" ? `<div class="muted small" style="margin-top:6px">${esc(FW_LAYERING)}</div>` : ""}` };
+}
+function buildFrameSession() {
+  const cards = frameCards(), st = frameState(), now = Date.now();
+  const due = cards.filter(c => st[c.id] && st[c.id].due <= now).sort((a, b) => st[a.id].due - st[b.id].due);
+  const fresh = [], byDeck = {};
+  cards.filter(c => !st[c.id]).forEach(c => (byDeck[c.deck] = byDeck[c.deck] || []).push(c));
+  // New cards round-robin across decks, with the case-ready decks first
+  for (let i = 0; Object.values(byDeck).some(a => a.length); i++) for (const d of ["d2", "d4", "d1", "d3", "sq"]) if (byDeck[d] && byDeck[d].length) fresh.push(byDeck[d].shift());
+  const later = cards.filter(c => st[c.id] && st[c.id].due > now).sort((a, b) => (st[a.id].streak - st[b.id].streak) || st[a.id].due - st[b.id].due);
+  const out = []; let typed = 0;
+  const add = c => {
+    if (out.length >= 12 || out.includes(c)) return;
+    if (c.kind === "subq") { if (typed >= 2) return; typed++; }
+    out.push(c);
+  };
+  due.forEach(add); fresh.forEach(add); later.forEach(add);
+  return shuffle(out).map(c => cardItem(c));
+}
+// A missed card comes back a few cards later, once per session.
+function frameRequeue(q) {
+  if (q.again) return;
+  S.queue.splice(Math.min(S.idx + 3, S.queue.length), 0, cardItem(q.card, true));
+}
+
+/* ============================================================
    Session building
    ============================================================ */
 let S = null;            // active session
@@ -2100,7 +2277,7 @@ function skillStats() {
   return out;
 }
 function weakest(stats) {
-  const ks = Object.keys(SKILLS).filter(k => k !== "quant");   // the quant course stays opt-in
+  const ks = Object.keys(SKILLS).filter(k => k !== "quant" && k !== "frame");   // opt-in modes stay out of Daily Shift
   const untried = ks.filter(k => stats[k].n === 0);
   if (untried.length) return untried[0];
   return ks.slice().sort((a, b) => stats[a].mastery - stats[b].mastery)[0];
@@ -2123,6 +2300,7 @@ function itemsFor(skill, n) {
 function buildQueue(mode) {
   if (mode === "metric") return [...metricRound(), ...metricRound(), ...metricRound()];
   if (mode.startsWith("q:")) return quantDrill(mode.slice(2));
+  if (mode === "frames") return buildFrameSession();
   if (mode === "qmix") {
     const qs = quantStats(), pool = QORDER.filter(k => k !== "interview" && qs.con[k].status !== "new");
     const ks = pool.length >= 2 ? pool : QORDER.slice(0, 4);
@@ -2326,7 +2504,7 @@ function renderHome() {
 
     <section class="wrap" style="gap:12px">
       <div class="section-head"><h2>Drill your gaps</h2><span class="muted" style="font-size:.85rem">Each mode targets one habit from your list</span></div>
-      <div class="modes">${["metric", "sniper", "close", "bucket", "lingo"].map(modeCard).join("")}</div>
+      <div class="modes">${["metric", "sniper", "close", "bucket", "lingo"].map(modeCard).join("")}${frameCard()}</div>
     </section>
 
     <section class="wrap" style="gap:12px">
@@ -2772,6 +2950,82 @@ function answerCI() {
 }
 
 /* ============================================================
+   Rendering: Framework Recall cards
+   ============================================================ */
+function frameCard() {
+  const st = frameState(), dm = deckMastery(st), cards = frameCards(), now = Date.now();
+  const due = cards.filter(c => st[c.id] && st[c.id].due <= now).length, fresh = cards.filter(c => !st[c.id]).length, ready = frameReady(dm);
+  return `<button class="mode" type="button" data-mode="frames">
+    <span class="row"><h3>Framework Recall</h3><span class="tag ${ready ? "hl" : ""}">${ready ? "Case-ready" : "Frameworks"}</span></span>
+    <p>Flashcards for your HTCI frameworks. Name the buckets in under 10 seconds, then apply them in full cases.</p>
+    <span class="deckbars">${["d1", "d2", "d3", "d4"].map(d => `<span class="dbar"><span>${FW_DECKS[d].short}</span><span class="mbar ${dm[d].pct >= .8 ? "done" : ""}"><i style="width:${(dm[d].pct * 100).toFixed(0)}%"></i></span><b class="num">${Math.round(dm[d].pct * 100)}%</b></span>`).join("")}</span>
+    <span class="meta"><span>${due ? `<b class="num">${due}</b> due today` : fresh ? `${fresh} new cards` : "All caught up"}</span><span>${ready ? "Decks 2 and 4 at 80%" : "Case-ready at 80% on decks 2 and 4"}</span></span>
+  </button>`;
+}
+
+function renderFlipQ(q, st) {
+  const c = q.card;
+  st.innerHTML = `${q.again ? `<span class="eyebrow again">Again · you missed this one</span>` : ""}
+    <span class="eyebrow">${esc(FW_DECKS[c.deck].name)} · ${esc(c.label)}</span>
+    <div class="fcard ${c.kind === "subq" ? "sq" : ""}"><div class="fc-front">${esc(c.front)}</div>
+      <div class="fc-back" id="fcBack" hidden>${c.kind === "subq" ? `<ul>${c.back.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : c.back.map(x => `<div class="fc-main">${esc(x)}</div>`).join("")}${c.note ? `<div class="fc-note">${esc(c.note)}</div>` : ""}</div>
+    </div>
+    ${c.kind === "subq" ? `<textarea class="close-in" id="sqIn" rows="3" placeholder="Type 2–3 sub-questions for this bucket…" aria-label="Your sub-questions"></textarea>` : ""}
+    <div class="fc-meta"><span class="num" id="fcTimer">0s</span><span class="muted">target ${q.tms / 1000}s</span></div>
+    <div class="nextrow" id="fcActions"><span class="hint">${c.kind === "subq" ? "Write yours first, then flip to compare." : "Recall the answer first, then flip."}</span><button class="btn primary" type="button" id="flipBtn">Flip <kbd style="background:transparent;color:inherit;border-color:currentColor">${c.kind === "subq" ? "Ctrl+Enter" : "Space"}</kbd></button></div>`;
+  $("#flipBtn").addEventListener("click", flipCard);
+  if (c.kind === "subq") {
+    const ta = $("#sqIn"); ta.focus();
+    ta.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); flipCard(); } });
+  } else $("#flipBtn").focus({ preventScroll: true });
+  const me = S, iv = setInterval(() => {
+    const el = $("#fcTimer");
+    if (S !== me || !el || S.flipped) return clearInterval(iv);
+    const sec = Math.floor((Date.now() - S.qStart) / 1000);
+    el.textContent = sec + "s"; el.classList.toggle("neg", sec * 1000 > q.tms);
+  }, 250);
+}
+function flipCard() {
+  if (!S || S.flipped || S.answered) return;
+  const q = current();
+  S.flipped = true; S.flipMs = Date.now() - S.qStart;
+  $("#fcBack").hidden = false;
+  $("#fcTimer").textContent = (S.flipMs / 1000).toFixed(1) + "s";
+  $("#fcTimer").classList.toggle("neg", S.flipMs > q.tms);
+  const ta = $("#sqIn");
+  if (ta) { ta.disabled = true; if (!ta.value.trim()) ta.value = "(nothing typed)"; }
+  $("#fcActions").innerHTML = `<span class="hint">How did you do?</span><span class="grades">
+    <button class="btn grade-ok" type="button" data-g="1">Got it <kbd>1</kbd></button>
+    <button class="btn grade-part" type="button" data-g=".5">Partial <kbd>2</kbd></button>
+    <button class="btn grade-miss" type="button" data-g="0">Missed <kbd>3</kbd></button></span>`;
+  $("#fcActions").querySelectorAll("[data-g]").forEach(b => b.addEventListener("click", () => gradeCard(+b.dataset.g)));
+  $("#fcActions [data-g='1']").focus({ preventScroll: true });
+}
+function gradeCard(v) {
+  if (!S || !S.flipped || S.answered) return;
+  S.answered = true;
+  const q = current();
+  S.qStart = Date.now() - S.flipMs;   // time per card = time to flip, not time spent grading
+  record(v);
+  if (v === 0) frameRequeue(q);
+  $("#fcActions").innerHTML = `<span class="hint">${v === 1 ? "Logged as got it." : v === 0 ? "Logged as missed. It comes back in a few cards and again tomorrow." : "Logged as partial. It comes back tomorrow."}</span>`;
+  const me = S; setTimeout(() => { if (S === me) next(); }, v === 1 ? 300 : 900);
+}
+
+function frameReview(s, readyBefore) {
+  const st = frameState(), dm = deckMastery(st), ready = frameReady(dm);
+  const label = v => (v >= 1 ? "Got it" : v > 0 ? "Partial" : "Missed");
+  const rows = s.items.map(it => {
+    const c = cardById(it.f), o = st[it.f];
+    return `<tr><td>${esc(c.kind === "pick" && c.fronts ? c.answer : c.front)}<div class="muted small">${esc(FW_DECKS[c.deck].short)}</div></td><td><span class="pill ${it.ok >= 1 ? "mast" : it.ok > 0 ? "prog" : "work"}">${label(it.ok)}</span></td><td class="num ${it.ms > FW_TARGET[c.kind] ? "neg" : ""}">${(it.ms / 1000).toFixed(1)}s</td><td class="small">${o ? (o.mastered ? "Mastered · " : "") + dueLabel(o) : ""}</td></tr>`;
+  }).join("");
+  return `${ready && !readyBefore ? `<div class="rankup">Case-ready: Decks 2 and 4 are at 80% mastery. Time to apply the frameworks in full cases.</div>` : ""}
+    <div class="deckbars wide">${Object.keys(FW_DECKS).map(d => `<span class="dbar"><span>${FW_DECKS[d].short}</span><span class="mbar ${dm[d].pct >= .8 ? "done" : ""}"><i style="width:${(dm[d].pct * 100).toFixed(0)}%"></i></span><b class="num">${dm[d].mastered}/${dm[d].total}</b></span>`).join("")}</div>
+    <p class="muted small">Mastered = 3 clean hits in a row; mastered cards come back weekly. ${ready ? "Case-ready." : "Case-ready once Decks 2 and 4 reach 80%."}</p>
+    <div class="ptable-wrap"><table class="ptable" style="min-width:420px"><thead><tr><th>Card</th><th>Result</th><th>Time</th><th>Next review</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/* ============================================================
    Rendering: game
    ============================================================ */
 function renderGame() {
@@ -2827,6 +3081,8 @@ function contextBlock(q) {
 }
 
 const KEYHINT = {
+  flip: "<kbd>Space</kbd> flips · then <kbd>1</kbd> got it · <kbd>2</kbd> partial · <kbd>3</kbd> missed · <kbd>Esc</kbd> quit",
+  subq: "<kbd>Ctrl</kbd>+<kbd>Enter</kbd> flips · then <kbd>1</kbd> got it · <kbd>2</kbd> partial · <kbd>3</kbd> missed",
   market: "<kbd>Tab</kbd> moves to the offer · <kbd>Enter</kbd> quotes · <kbd>Esc</kbd> quit",
   ci: "<kbd>Tab</kbd> moves to the high end · <kbd>Enter</kbd> locks in · <kbd>Esc</kbd> quit",
   mcq: "Keys: <kbd>1</kbd>–<kbd>4</kbd> pick an option · <kbd>Enter</kbd> next · <kbd>Esc</kbd> quit",
@@ -2841,6 +3097,7 @@ function bossBar() {
 }
 function renderQuestion() {
   const q = current();
+  S.flipped = false;
   $("#keyhint").innerHTML = KEYHINT[q.type === "num" && q.auto ? "auto" : q.type];
   S.answered = false; S.qStart = Date.now();
   renderPips();
@@ -2875,6 +3132,8 @@ function renderQuestion() {
       if (inp.value !== clean) inp.value = clean;
       if ((clean.match(/\d/g) || []).length >= q.auto) answerNum(slotValue(q, clean));
     });
+  } else if (q.type === "flip" || q.type === "subq") {
+    renderFlipQ(q, st);
   } else if (q.type === "market") {
     renderMarketQ(q, st);
   } else if (q.type === "ci") {
@@ -2931,6 +3190,7 @@ function answerMCQ(i) {
   if (S.answered) return; S.answered = true;
   const q = current(), ok = i === q.answer;
   const r = record(ok ? 1 : 0);
+  if (q.skill === "frame" && !ok) frameRequeue(q);
   $("#stage").querySelectorAll(".opt").forEach((b, j) => { b.disabled = true; if (j === q.answer) b.classList.add("right"); else if (j === i) b.classList.add("wrong"); });
   if (q.sprint) { const me = S; setTimeout(() => { if (S === me) next(); }, ok ? 380 : 1500); return; }
   const slow = r.ms > SKILLS[q.skill].target ? ` <span class="muted">(${(r.ms / 1000).toFixed(0)}s, target ${(SKILLS[q.skill].target / 1000).toFixed(0)}s)</span>` : "";
@@ -3042,6 +3302,8 @@ async function finish() {
   if (s.sprint) rec.dur = Math.round(Math.min(s.sprint, (Date.now() - s.startTs) / 1000));
   const isMath = s.mode === "math" || s.mode === "weak" || s.mode === "boss" || s.mode.startsWith("m:");
   const isQuant = s.mode.startsWith("q:") || s.mode === "qmix" || s.mode === "qmm";
+  const isFrame = s.mode === "frames";
+  const frameReadyBefore = isFrame ? frameReady(deckMastery(frameState())) : false;
   const prev = Store.recs.filter(r => r.mode === s.mode).slice(-1)[0];
   Store.add(rec);
   const acc = s.items.reduce((a, b) => a + b.ok, 0) / s.items.length;
@@ -3095,7 +3357,7 @@ async function finish() {
         <div><b>+${s.xp}</b><span>XP earned</span></div>
         <div><b>×${s.bestCombo}</b><span>best combo</span></div>
       </div>
-      ${isMath ? mathBlock : isQuant ? quantReview(s) : `<div class="review">${review}</div>`}
+      ${isMath ? mathBlock : isQuant ? quantReview(s) : isFrame ? frameReview(s, frameReadyBefore) : `<div class="review">${review}</div>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn primary" type="button" id="againBtn">Run it back <kbd style="background:transparent;color:inherit;border-color:currentColor">Enter</kbd></button>
         ${isMath ? `<button class="btn" type="button" id="gymBtn2">Back to Math Gym</button>` : ""}
@@ -3153,6 +3415,11 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") { if (tag === "textarea") { t.blur(); return; } requestQuit(); return; }
   const q = current();
   if (!q || $("#quitBar")) return;
+  if ((q.type === "flip" || q.type === "subq") && !S.answered) {
+    if (!S.flipped && (e.key === " " || e.key === "Enter") && !typing && !onButton) { e.preventDefault(); flipCard(); return; }
+    if (S.flipped && /^[123]$/.test(e.key) && !typing) { gradeCard([1, .5, 0][+e.key - 1]); return; }
+    return;
+  }
   if (S.answered && e.key === "Enter" && !onButton && !typing && $("#nextBtn")) { e.preventDefault(); next(); return; }
   if (!S.answered && q.type === "mcq" && /^[1-9]$/.test(e.key) && !typing) {
     const i = +e.key - 1; if (i < q.options.length) answerMCQ(i);
